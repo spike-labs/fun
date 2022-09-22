@@ -6,7 +6,7 @@ import (
 	"github.com/fsnotify/fsnotify"
 	"github.com/spf13/viper"
 	"os"
-	"spike-frame/constant"
+	"spike-mc-ops/constant"
 )
 
 func InitViper() *viper.Viper {

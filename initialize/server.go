@@ -3,7 +3,7 @@ package initialize
 import (
 	"github.com/fvbock/endless"
 	"github.com/gin-gonic/gin"
-	"spike-frame/config"
+	"spike-mc-ops/config"
 	"time"
 )
 
