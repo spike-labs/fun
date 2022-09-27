@@ -7,9 +7,13 @@ const (
 	DOMAIN              = "deep-index.moralis.io"
 	MORALIS_API_VERSION = "api/v2"
 	MORALIS_API         = PROTOCOL + "://" + DOMAIN + "/" + MORALIS_API_VERSION + "/"
-	NewBlockTopic       = "newBlockTopic"
 	BlockConfirmHeight  = 15
 	EmptyAddress        = "0x0000000000000000000000000000000000000000"
+
+	LoginAddr       = "/api/auth/login"
+	SendMailAddr    = "/api/user/send/band/email"
+	BindAccountAddr = "/api/user/band/address"
+	UserInfoAddr    = "/api/user/info"
 )
 
 const (

@@ -5,17 +5,17 @@ import (
 	logger "github.com/ipfs/go-log"
 	"spike-mc-ops/request"
 	"spike-mc-ops/response"
-	"spike-mc-ops/service/marketCapitalizationManagementService"
+	"spike-mc-ops/service/mcMgrSrv"
 )
 
 var log = logger.Logger("txApi")
 
 type TxGroup struct {
-	m *marketCapitalizationManagementService.MCManager
+	m *mcMgrSrv.MCManager
 }
 
 func NewTxGroup() (TxGroup, error) {
-	m := marketCapitalizationManagementService.NewMCManager()
+	m := mcMgrSrv.NewMCManager()
 	return TxGroup{
 		m: m,
 	}, nil

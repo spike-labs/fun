@@ -1,29 +1,38 @@
-[system]
-port = ":3000"
-machineId = "1"
+[System]
+Port = ":3000"
 
-[contract]
-SksAddress = "0x32661f9851CC487d91A4Edc2ac421D48B4aEE942"
+[Contract]
+GameTokenAddress = "0x32661f9851CC487d91A4Edc2ac421D48B4aEE942"
 UsdcAddress = "0x64544969ed7EBf5f083679233325356EbE738930"
 PanCakeRouterAddress = "0x9Ac64Cc6e4415144C455BD8E4837Fea55603e5c3"
+GameTokenDexPoolAddress = "0x5da8b47c634762104f288fd847ce0da1d4982441"
+NftAddress = "0x9E30e0De5682bced703275fb4dCad78EddCC592D"
+GameVaultAddress = "0xDd77BBAafc52BDfA84Bb98a095dfb715f8280870"
 
+[Redis]
+Address = "119.13.91.74:6379"
+Password = ""
 
-[redis]
-address = "119.13.91.74:6379"
-password = ""
+[Moralis]
+XApiKey = "7L9fFRFaUpKOlFoUZi7SN0UBiUWbHgf6tTenyqg19TjPRTGuRS46UMRierHQ3XIs"
 
-[chain]
-wsNodeAddress = "wss://ws-nd-513-001-835.p2pify.com/16ead84fd5bde769914b64a03ecde444"
-rpcNodeAddress = "https://nd-513-001-835.p2pify.com/16ead84fd5bde769914b64a03ecde444"
+[Chain]
+WsNodeAddress = "wss://ws-nd-513-001-835.p2pify.com/16ead84fd5bde769914b64a03ecde444"
+RpcNodeAddress = "https://nd-513-001-835.p2pify.com/16ead84fd5bde769914b64a03ecde444"
 
-[mysql]
-path = "119.13.91.74"
-port = "3306"
-dbName = "spike_frame_server"
-username = "root"
-password = "oasis2022"
-maxIdleConns = 0
-maxOpenConns = 0
+[Mysql]
+Path = "119.13.91.74"
+Port = "3306"
+DbName = "spike_frame_server"
+Username = "root"
+Password = "oasis2022"
+MaxIdleConns = 0
+MaxOpenConns = 0
 
 [PuppetWallet]
 PrivateKey=["0xd40057ab76f387e73c9e109e1e2c89c2cb73ae4aa11700aed66b87a0ef04b5c2","0xaf32a0e8de3382191132bdd01b84afa382c97732b8e92abaf5aa3f95db0f7771","0x5ffc7decde4977183cdc6ddb1b544be04a97ff12249d97354343815ee9c73726"]
+
+[Game]
+DefaultPassword = "807497a6f2d597c512d8b247c2158054" #12345678
+GameServerAddr = "https://login.spacekill.fun/amongus"
+DefaultCaptcha = "0000"

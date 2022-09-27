@@ -1,4 +1,4 @@
-package marketCapitalizationManagementService
+package mcMgrSrv
 
 import (
 	"github.com/ethereum/go-ethereum/common"
@@ -100,7 +100,7 @@ loop:
 				break loop
 			}
 
-			sksPrice, err := m.Wallet.Router.GetAmountsOut(nil, util.ToWei("1", 18), []common.Address{common.HexToAddress(config.Cfg.Contract.SksAddress), common.HexToAddress(config.Cfg.Contract.UsdcAddress)})
+			sksPrice, err := m.Wallet.Router.GetAmountsOut(nil, util.ToWei("1", 18), []common.Address{common.HexToAddress(config.Cfg.Contract.GameTokenAddress), common.HexToAddress(config.Cfg.Contract.UsdcAddress)})
 			if err != nil {
 				log.Error(err)
 				return nil
@@ -110,7 +110,7 @@ loop:
 
 			if buyPrice.GreaterThanOrEqual(util.ToDecimal(sksPrice[len(sksPrice)-1], 18)) && sellPrice.GreaterThanOrEqual(util.ToDecimal(sksPrice[len(sksPrice)-1], 18)) {
 				log.Info("buy")
-				tokenAmount, err := m.SwapToken(uuid, []common.Address{common.HexToAddress(config.Cfg.Contract.UsdcAddress), common.HexToAddress(config.Cfg.Contract.SksAddress)}, constant.BUY_OP)
+				tokenAmount, err := m.SwapToken(uuid, []common.Address{common.HexToAddress(config.Cfg.Contract.UsdcAddress), common.HexToAddress(config.Cfg.Contract.GameTokenAddress)}, constant.BUY_OP)
 				if err != nil {
 					log.Error(err)
 					break
@@ -119,7 +119,7 @@ loop:
 
 			} else if buyPrice.LessThanOrEqual(util.ToDecimal(sksPrice[len(sksPrice)-1], 18)) && sellPrice.LessThanOrEqual(util.ToDecimal(sksPrice[len(sksPrice)-1], 18)) {
 				log.Info("sell")
-				_, err := m.SwapToken(uuid, []common.Address{common.HexToAddress(config.Cfg.Contract.SksAddress), common.HexToAddress(config.Cfg.Contract.UsdcAddress)}, constant.SELL_OP)
+				_, err := m.SwapToken(uuid, []common.Address{common.HexToAddress(config.Cfg.Contract.GameTokenAddress), common.HexToAddress(config.Cfg.Contract.UsdcAddress)}, constant.SELL_OP)
 				if err != nil {
 					log.Error(err)
 					break

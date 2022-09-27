@@ -9,23 +9,35 @@ var log = logger.Logger("config")
 var Cfg Config
 
 type Config struct {
-	System       System       `json:"system" toml:"system"`
-	Contract     Contract     `json:"contract" toml:"contract"`
-	Redis        Redis        `json:"redis" toml:"redis"`
-	Chain        Chain        `json:"chain" toml:"chain"`
-	Mysql        Mysql        `json:"mysql" toml:"mysql"`
+	System       System       `toml:"System"`
+	Contract     Contract     `toml:"Contract"`
+	Redis        Redis        `toml:"Redis"`
+	Chain        Chain        `toml:"Chain"`
+	Mysql        Mysql        `toml:"Mysql"`
 	PuppetWallet PuppetWallet `toml:"PuppetWallet"`
+	GameInfo     GameInfo     `toml:"Game"`
+	Moralis      Moralis      `toml:"Moralis"`
+}
+
+type Moralis struct {
+	XApiKey string `toml:"XApiKey"`
+}
+
+type GameInfo struct {
+	DefaultPassword   string `toml:"DefaultPassword"`
+	GameServerAddress string `toml:"GameServerAddr"`
+	DefaultCaptcha    string `toml:"DefaultCaptcha"`
 }
 
 type Mysql struct {
-	Path         string `json:"path" toml:"path"`
-	Port         string `json:"port" toml:"port"`
-	Config       string `json:"config" toml:"config"`
-	Dbname       string `json:"db_name" toml:"dbName"`
-	Username     string `json:"username" toml:"username"`
-	Password     string `json:"password" toml:"password"`
-	MaxIdleConns int    `json:"maxIdleConns" toml:"maxIdleConns"`
-	MaxOpenConns int    `json:"maxOpenConns" toml:"maxOpenConns"`
+	Path         string `toml:"Path"`
+	Port         string `toml:"Port"`
+	Config       string `toml:"Config"`
+	Dbname       string `toml:"DbName"`
+	Username     string `toml:"Username"`
+	Password     string `toml:"Password"`
+	MaxIdleConns int    `toml:"MaxIdleConns"`
+	MaxOpenConns int    `toml:"MaxOpenConns"`
 }
 
 func (m *Mysql) Dsn() string {
@@ -33,24 +45,26 @@ func (m *Mysql) Dsn() string {
 }
 
 type Chain struct {
-	WsNodeAddress  string `toml:"wsNodeAddress"`
-	RpcNodeAddress string `toml:"rpcNodeAddress"`
+	WsNodeAddress  string `toml:"WsNodeAddress"`
+	RpcNodeAddress string `toml:"RpcNodeAddress"`
 }
 
 type System struct {
-	Port      string `toml:"port"`
-	MachineId string `toml:"machineId"`
+	Port string `toml:"Port"`
 }
 
 type Redis struct {
-	Address  string `toml:"address"`
-	Password string `toml:"password"`
+	Address  string `toml:"Address"`
+	Password string `toml:"Password"`
 }
 
 type Contract struct {
-	SksAddress           string `toml:"SksAddress"`
-	UsdcAddress          string `toml:"UsdcAddress"`
-	PanCakeRouterAddress string `toml:"PanCakeRouterAddress"`
+	GameTokenDexPoolAddress string `toml:"GameTokenDexPoolAddress"`
+	GameTokenAddress        string `toml:"GameTokenAddress"`
+	UsdcAddress             string `toml:"UsdcAddress"`
+	NftAddress              string `toml:"NftAddress"`
+	GameVaultAddress        string `toml:"GameVaultAddress"`
+	PanCakeRouterAddress    string `toml:"PanCakeRouterAddress"`
 }
 
 type PuppetWallet struct {

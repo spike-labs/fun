@@ -1,4 +1,4 @@
-package marketCapitalizationManagementService
+package mcMgrSrv
 
 import (
 	"context"
@@ -56,5 +56,4 @@ func NewPuppetWallet() *PuppetWallet {
 		Router:        router,
 		PuppetWallets: puppetWallets,
 	}
-
 }
