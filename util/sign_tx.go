@@ -9,9 +9,11 @@ import (
 	"github.com/ethereum/go-ethereum/ethclient"
 	"github.com/shopspring/decimal"
 	"math/big"
+	"math/rand"
 	"reflect"
 	"regexp"
 	"strconv"
+	"time"
 )
 
 type SpikeTx struct {
@@ -151,4 +153,10 @@ func SigRSV(isig interface{}) ([32]byte, [32]byte, uint8) {
 	V := uint8(vI + 27)
 
 	return R, S, V
+}
+
+func Random(min, max int) int {
+	rand.Seed(time.Now().Unix())
+	r := rand.Intn(max - min)
+	return r + min
 }

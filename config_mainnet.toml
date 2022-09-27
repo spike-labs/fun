@@ -1,0 +1,29 @@
+[system]
+port = ":3000"
+machineId = "1"
+
+[contract]
+SksAddress = "0x3ebdAD182ea4F8D389c1EcDfeb3584F6bF416fd3"
+UsdcAddress = "0x8AC76a51cc950d9822D68b83fE1Ad97B32Cd580d"
+PanCakeRouterAddress = "0x10ED43C718714eb63d5aA57B78B54704E256024E"
+
+
+[redis]
+address = "119.13.91.74:6379"
+password = ""
+
+[chain]
+wsNodeAddress = "wss://ws-nd-678-315-485.p2pify.com/d4eb497a914a929ca6f696b9b6859ab7"
+rpcNodeAddress = "https://nd-678-315-485.p2pify.com/d4eb497a914a929ca6f696b9b6859ab7"
+
+[mysql]
+path = "119.13.91.74"
+port = "3306"
+dbName = "spike_frame_server"
+username = "root"
+password = "oasis2022"
+maxIdleConns = 0
+maxOpenConns = 0
+
+[PuppetWallet]
+PrivateKey=["d40057ab76f387e73c9e109e1e2c89c2cb73ae4aa11700aed66b87a0ef04b5c2","af32a0e8de3382191132bdd01b84afa382c97732b8e92abaf5aa3f95db0f7771","5ffc7decde4977183cdc6ddb1b544be04a97ff12249d97354343815ee9c73726"]

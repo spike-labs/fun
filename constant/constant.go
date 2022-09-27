@@ -18,3 +18,8 @@ const (
 	TOTAL_AMOUNT
 	SINGLE_AMOUNT
 )
+
+const (
+	BUY_OP = iota + 1
+	SELL_OP
+)

@@ -3,9 +3,9 @@ port = ":3000"
 machineId = "1"
 
 [contract]
-SksAddress = "0x3ebdAD182ea4F8D389c1EcDfeb3584F6bF416fd3"
-UsdcAddress = "0x8AC76a51cc950d9822D68b83fE1Ad97B32Cd580d"
-PanCakeRouterAddress = "0x10ED43C718714eb63d5aA57B78B54704E256024E"
+SksAddress = "0x32661f9851CC487d91A4Edc2ac421D48B4aEE942"
+UsdcAddress = "0x64544969ed7EBf5f083679233325356EbE738930"
+PanCakeRouterAddress = "0x9Ac64Cc6e4415144C455BD8E4837Fea55603e5c3"
 
 
 [redis]
@@ -13,8 +13,8 @@ address = "119.13.91.74:6379"
 password = ""
 
 [chain]
-wsNodeAddress = "wss://ws-nd-678-315-485.p2pify.com/d4eb497a914a929ca6f696b9b6859ab7"
-rpcNodeAddress = "https://nd-678-315-485.p2pify.com/d4eb497a914a929ca6f696b9b6859ab7"
+wsNodeAddress = "wss://ws-nd-513-001-835.p2pify.com/16ead84fd5bde769914b64a03ecde444"
+rpcNodeAddress = "https://nd-513-001-835.p2pify.com/16ead84fd5bde769914b64a03ecde444"
 
 [mysql]
 path = "119.13.91.74"
@@ -25,4 +25,5 @@ password = "oasis2022"
 maxIdleConns = 0
 maxOpenConns = 0
 
-
+[PuppetWallet]
+PrivateKey=["0xd40057ab76f387e73c9e109e1e2c89c2cb73ae4aa11700aed66b87a0ef04b5c2","0xaf32a0e8de3382191132bdd01b84afa382c97732b8e92abaf5aa3f95db0f7771","0x5ffc7decde4977183cdc6ddb1b544be04a97ff12249d97354343815ee9c73726"]

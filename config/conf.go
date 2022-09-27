@@ -9,11 +9,12 @@ var log = logger.Logger("config")
 var Cfg Config
 
 type Config struct {
-	System   System   `json:"system" toml:"system"`
-	Contract Contract `json:"contract" toml:"contract"`
-	Redis    Redis    `json:"redis" toml:"redis"`
-	Chain    Chain    `json:"chain" toml:"chain"`
-	Mysql    Mysql    `json:"mysql" toml:"mysql"`
+	System       System       `json:"system" toml:"system"`
+	Contract     Contract     `json:"contract" toml:"contract"`
+	Redis        Redis        `json:"redis" toml:"redis"`
+	Chain        Chain        `json:"chain" toml:"chain"`
+	Mysql        Mysql        `json:"mysql" toml:"mysql"`
+	PuppetWallet PuppetWallet `toml:"PuppetWallet"`
 }
 
 type Mysql struct {
@@ -50,4 +51,8 @@ type Contract struct {
 	SksAddress           string `toml:"SksAddress"`
 	UsdcAddress          string `toml:"UsdcAddress"`
 	PanCakeRouterAddress string `toml:"PanCakeRouterAddress"`
+}
+
+type PuppetWallet struct {
+	PrivateKey []string `toml:"PrivateKey"`
 }

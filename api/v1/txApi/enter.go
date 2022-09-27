@@ -37,7 +37,19 @@ func (txGroup *TxGroup) AddStrategy(c *gin.Context) {
 		log.Error("=== Spike log: ", err)
 		response.FailWithMessage("request params error", c)
 	}
-	uuid := txGroup.m.AddStadeStrategy(service)
+	uuid := txGroup.m.AddTradeStrategy(service)
 
 	response.OkWithData(uuid, c)
+}
+
+func (txGroup *TxGroup) CancelStrategy(c *gin.Context) {
+	var service request.DelTradeStrategyService
+	err := c.ShouldBind(&service)
+	if err != nil {
+		log.Error("=== Spike log: ", err)
+		response.FailWithMessage("request params error", c)
+	}
+	txGroup.m.CancelStrategy(service.Uuid)
+
+	response.Ok(c)
 }
