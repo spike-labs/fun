@@ -71,7 +71,7 @@ func (m *MCManager) ExecStrategy(uuid string) error {
 
 	strategy := m.Strategies[uuid]
 
-	ticker := time.NewTicker(time.Duration(strategy.Frequency) * time.Minute)
+	ticker := time.NewTicker(time.Duration(strategy.Frequency) * time.Second)
 	deadlineTicker := time.NewTicker(time.Duration(strategy.ExecTime) * time.Minute)
 	amount, err := strconv.ParseInt(strategy.Amount[constant.TOTAL_AMOUNT], 10, 18)
 	if err != nil {
@@ -144,7 +144,7 @@ func (m *MCManager) SwapToken(uuid string, path []common.Address, flag int) (int
 	var fund int
 
 	rand.Seed(time.Now().Unix())
-	singer := m.Wallet.PuppetWallets[rand.Intn(len(m.Wallet.PuppetWallets)-1)]
+	singer := m.Wallet.PuppetWallets[rand.Intn(len(m.Wallet.PuppetWallets))]
 
 	deadline := time.Now().Add(time.Minute * 10).Unix()
 
