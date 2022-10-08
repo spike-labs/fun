@@ -76,7 +76,6 @@ func GenerateAddress(private string) (string, error) {
 
 	address := crypto.PubkeyToAddress(*publicKeyECDSA).String()
 
-	log.Infof(address)
 	return address, err
 }
 

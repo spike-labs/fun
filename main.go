@@ -11,6 +11,6 @@ import (
 func main() {
 	logger.SetLogLevel("*", "INFO")
 	global.Viper = config.InitViper()
-	chain.FilterPancakeLog()
+	chain.BuyTxListener()
 	initialize.RunServer()
 }

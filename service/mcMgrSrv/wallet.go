@@ -8,6 +8,7 @@ import (
 	"github.com/ethereum/go-ethereum/ethclient"
 	contract "spike-mc-ops/chain/contract"
 	"spike-mc-ops/config"
+	"spike-mc-ops/util"
 )
 
 type PuppetWallet struct {
@@ -43,6 +44,8 @@ func NewPuppetWallet() *PuppetWallet {
 		if err != nil {
 			panic(err)
 		}
+		util.CheckAllowance(config.Cfg.PuppetWallet.PrivateKey[i], config.Cfg.Contract.UsdcAddress, config.Cfg.Contract.PanCakeRouterAddress, id, bscClient)
+		util.CheckAllowance(config.Cfg.PuppetWallet.PrivateKey[i], config.Cfg.Contract.GameTokenAddress, config.Cfg.Contract.PanCakeRouterAddress, id, bscClient)
 		opts, err := bind.NewKeyedTransactorWithChainID(priKey, id)
 		if err != nil {
 			panic(err)

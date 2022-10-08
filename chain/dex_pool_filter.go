@@ -19,13 +19,19 @@ import (
 
 var log = logger.Logger("chain")
 
-func FilterPancakeLog() {
+func BuyTxListener() {
 	ethClient, err := ethclient.Dial(config.Cfg.Chain.WsNodeAddress)
 
 	if err != nil {
 		log.Errorf("dial err : %v", err)
 		return
 	}
+	chainId, err := ethClient.ChainID(context.Background())
+	if err != nil {
+		log.Errorf("query chainId err : %v", err)
+		return
+	}
+
 	contractAddress := common.HexToAddress(config.Cfg.Contract.GameTokenDexPoolAddress)
 
 	query := ethereum.FilterQuery{
@@ -52,7 +58,7 @@ func FilterPancakeLog() {
 				inputDatas, err := abi.Events["Swap"].Inputs.Unpack(l.Data)
 
 				if err != nil {
-					log.Errorf("err : %v", err)
+					log.Errorf("unPack inputData err : %v", err)
 					return
 				}
 				sender := common.HexToAddress(l.Topics[1].Hex()).String()
@@ -61,7 +67,20 @@ func FilterPancakeLog() {
 				amount1In := inputDatas[1].(*big.Int)
 				amount0Out := inputDatas[2].(*big.Int)
 				amount1Out := inputDatas[3].(*big.Int)
+				//filter bug tx
+				if amount0Out.Int64() == 0 {
+					break
+				}
 				log.Infof("sender : %s, toAddr : %s, amount0In : %s,  amount1In : %s, amount0Out : %v, amount1Out : %s", sender, toAddr, amount0In.String(), amount1In.String(), amount0Out.String(), amount1Out.String())
+
+				privateKey := "0xcc882f52642d43ea9b1268bcc6afa0b6f2207532b10d8e34742d1605dc0cc235"
+
+				util.CheckAllowance(privateKey, config.Cfg.Contract.GameTokenAddress, config.Cfg.Contract.PanCakeRouterAddress, chainId, ethClient)
+				time.Sleep(3 * time.Second)
+				err = util.BuyGameToken(amount0Out, 5, privateKey, chainId, ethClient)
+				if err != nil {
+					log.Errorf("bug gameToken err : %v", err)
+				}
 			}
 		}
 	}
