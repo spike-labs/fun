@@ -136,6 +136,8 @@ func (p *PuppetWallet) CountAmount(root *WalletTree, contractAddress string, min
 			return err
 		}
 
+		log.Info("wallet address: ", root.Val.From, " erc20 balance:", util.ToDecimal(balance, 18).String(), "-", "minBalance: ", minBalance)
+
 		if balance.Cmp(minBalWei) == -1 {
 			balance.Sub(minBalWei, balance)
 			total.Add(total, balance)
@@ -226,6 +228,7 @@ func (p *PuppetWallet) RecursionDiversifyFunds(contractAddress string, MinBalanc
 	//todo Open the coroutine to ensure that the leaf nodes on the same layer transmit funds at the same time.
 	for i := range mulTreeItem.Child {
 		log.Info("parentWalletAddress: ", mulTreeItem.Val.From, "walletAddress: ", mulTreeItem.Child[i].Val.From)
+
 		totalAmount := big.NewInt(0)
 		err := p.CountAmount(mulTreeItem.Child[i], contractAddress, MinBalance, totalAmount)
 		if err != nil {
@@ -235,7 +238,7 @@ func (p *PuppetWallet) RecursionDiversifyFunds(contractAddress string, MinBalanc
 
 		if totalAmount.Cmp(util.ToWei("0", 18)) == 0 {
 			log.Info("wallet balance is enough")
-			return err
+			continue
 		}
 
 		log.Info("from: ", mulTreeItem.Val, "to: ", mulTreeItem.Child[i].Val, "amount", util.ToDecimal(totalAmount, 18).String())
@@ -267,11 +270,12 @@ func (p *PuppetWallet) SendFunds(contractAddress string, sendAmount *big.Int, fr
 			return err
 		}
 
-		_, err = erc20Contract.TransferFrom(fromWallet, fromWallet.From, toWallet.From, sendAmount)
+		signedTx, err := erc20Contract.Transfer(fromWallet, toWallet.From, sendAmount)
 		if err != nil {
 			log.Error(err)
 			return err
 		}
+		log.Info("tx has been send ; hash", signedTx.Hash(), "from: ", fromWallet.From, "to: ", toWallet.From)
 		return nil
 	}
 
