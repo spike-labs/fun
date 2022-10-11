@@ -26,7 +26,12 @@ func (txGroup *TxGroup) InitTxGroup(g *gin.RouterGroup) {
 	trade := g.Group("trade")
 	{
 		trade.POST("/addStrategy", txGroup.AddStrategy)
+		trade.POST("/cancelStrategy", txGroup.AddStrategy)
 
+	}
+	funds := g.Group("fund")
+	{
+		funds.POST("/diversifyFunds", txGroup.DiversifyFunds)
 	}
 }
 
@@ -50,6 +55,22 @@ func (txGroup *TxGroup) CancelStrategy(c *gin.Context) {
 		response.FailWithMessage("request params error", c)
 	}
 	txGroup.m.CancelStrategy(service.Uuid)
+
+	response.Ok(c)
+}
+
+func (txGroup *TxGroup) DiversifyFunds(c *gin.Context) {
+	var service request.DiversifyFundsService
+	err := c.ShouldBind(&service)
+	if err != nil {
+		log.Error("=== Spike log: ", err)
+		response.FailWithMessage("request params error", c)
+	}
+	err = txGroup.m.Wallet.DiversifyFunds(service)
+	if err != nil {
+		log.Error("=== Spike log: ", err)
+		response.Fail(c)
+	}
 
 	response.Ok(c)
 }

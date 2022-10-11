@@ -30,7 +30,8 @@ MaxIdleConns = 0
 MaxOpenConns = 0
 
 [PuppetWallet]
-PrivateKey=["0xd40057ab76f387e73c9e109e1e2c89c2cb73ae4aa11700aed66b87a0ef04b5c2","0xaf32a0e8de3382191132bdd01b84afa382c97732b8e92abaf5aa3f95db0f7771","0x5ffc7decde4977183cdc6ddb1b544be04a97ff12249d97354343815ee9c73726"]
+Mnemonic = "ritual address enroll inform pioneer apple senior crash moment name dog elephant"
+AccountNumber = 10
 
 [Game]
 DefaultPassword = "807497a6f2d597c512d8b247c2158054" #12345678

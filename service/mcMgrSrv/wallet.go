@@ -2,13 +2,21 @@ package mcMgrSrv
 
 import (
 	"context"
+	"errors"
+	"fmt"
+	"github.com/ethereum/go-ethereum"
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	"github.com/ethereum/go-ethereum/common"
+	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/crypto"
 	"github.com/ethereum/go-ethereum/ethclient"
+	"math/big"
+	"math/rand"
 	contract "spike-mc-ops/chain/contract"
 	"spike-mc-ops/config"
+	"spike-mc-ops/request"
 	"spike-mc-ops/util"
+	"time"
 )
 
 type PuppetWallet struct {
@@ -39,24 +47,300 @@ func NewPuppetWallet() *PuppetWallet {
 	}
 	puppetWallets := make([]*bind.TransactOpts, 0)
 
-	for i := range config.Cfg.PuppetWallet.PrivateKey {
-		priKey, err := crypto.HexToECDSA(config.Cfg.PuppetWallet.PrivateKey[i][2:])
+	for i := 0; i < config.Cfg.PuppetWallet.AccountNumber; i++ {
+		priKeyString, err := util.DerivePrivateKeyWithNumber(config.Cfg.PuppetWallet.Mnemonic, i)
 		if err != nil {
 			panic(err)
 		}
-		util.CheckAllowance(config.Cfg.PuppetWallet.PrivateKey[i], config.Cfg.Contract.UsdcAddress, config.Cfg.Contract.PanCakeRouterAddress, id, bscClient)
-		util.CheckAllowance(config.Cfg.PuppetWallet.PrivateKey[i], config.Cfg.Contract.GameTokenAddress, config.Cfg.Contract.PanCakeRouterAddress, id, bscClient)
+
+		priKey, err := crypto.HexToECDSA(priKeyString[2:])
+		if err != nil {
+			panic(err)
+		}
+
 		opts, err := bind.NewKeyedTransactorWithChainID(priKey, id)
 		if err != nil {
 			panic(err)
 		}
 
 		puppetWallets = append(puppetWallets, opts)
+
+		util.CheckAllowance(priKeyString, config.Cfg.Contract.UsdcAddress, config.Cfg.Contract.PanCakeRouterAddress, id, bscClient)
+		util.CheckAllowance(priKeyString, config.Cfg.Contract.GameTokenAddress, config.Cfg.Contract.PanCakeRouterAddress, id, bscClient)
+
 	}
 
 	return &PuppetWallet{
 		BscClient:     bscClient,
 		Router:        router,
 		PuppetWallets: puppetWallets,
+	}
+}
+
+type WalletTree struct {
+	Val   *bind.TransactOpts
+	Child []*WalletTree
+}
+
+func CreateMultipleTree(dataLst []*bind.TransactOpts) *WalletTree {
+	rand.Seed(time.Now().Unix())
+
+	// 剔除第一个账户 原始账户
+	data := make([]*bind.TransactOpts, len(dataLst))
+	copy(data, dataLst)
+
+	data = append(data[:0], data[1:]...)
+
+	leftWallet := config.Cfg.PuppetWallet.AccountNumber
+
+	treeItem := make([]*WalletTree, 0)
+	treeRoot := &WalletTree{Val: dataLst[0], Child: make([]*WalletTree, 0)}
+	treeItem = append(treeItem, treeRoot)
+
+	for {
+		if leftWallet == 0 || len(data) == 0 {
+			return treeRoot
+		}
+
+		childNum := util.Random(2, 5)
+		for i := 0; i < childNum; i++ {
+			if len(data) == 0 || len(treeItem) == 0 {
+				return treeRoot
+			}
+			leftWallet--
+			index := rand.Intn(len(data))
+			child := &WalletTree{Val: data[index], Child: make([]*WalletTree, 0)}
+			treeItem[0].Child = append(treeItem[0].Child, child)
+			treeItem = append(treeItem, child)
+			data = append(data[:index], data[index+1:]...)
+		}
+
+		treeItem = append(treeItem[:0], treeItem[1:]...)
+	}
+}
+
+// CountAmount Recursively query the total number below the minimum limit under the node.
+func (p *PuppetWallet) CountAmount(root *WalletTree, contractAddress string, minBalance string, total *big.Int) error {
+	if root == nil {
+		return nil
+	}
+	minBalWei := util.ToWei(minBalance, 18)
+
+	if contractAddress != "" {
+		// erc20 balance
+		erc20Contract, err := contract.NewErc20Contract(common.HexToAddress(contractAddress), p.BscClient)
+		if err != nil {
+			log.Error(err)
+			return err
+		}
+
+		balance, err := erc20Contract.BalanceOf(nil, root.Val.From)
+		if err != nil {
+			log.Error(err)
+			return err
+		}
+
+		if balance.Cmp(minBalWei) == -1 {
+			balance.Sub(minBalWei, balance)
+			total.Add(total, balance)
+			total.Add(total, util.ToWei("0.001", 18))
+		}
+	} else {
+		// bnb balance
+		balance, err := p.BscClient.BalanceAt(context.Background(), root.Val.From, nil)
+		if err != nil {
+			log.Error(err)
+			return err
+		}
+
+		if balance.Cmp(minBalWei) == -1 {
+			balance.Sub(minBalWei, balance)
+			total.Add(total, balance)
+			total.Add(total, util.ToWei("0.001", 18))
+		}
+
+	}
+
+	for i := range root.Child {
+		err := p.CountAmount(root.Child[i], contractAddress, minBalance, total)
+		if err != nil {
+			log.Error(err)
+			return err
+		}
+	}
+
+	return nil
+}
+
+func (p *PuppetWallet) DiversifyFunds(request request.DiversifyFundsService) error {
+	mulTreeRoot := CreateMultipleTree(p.PuppetWallets)
+	PrintTree(mulTreeRoot)
+	var err error
+	totalAmount := big.NewInt(0)
+	mainAccountBalance := big.NewInt(0)
+
+	// query main Account Balance ,bnb or erc20
+	if request.ContractAddress == "" {
+		mainAccountBalance, err = p.BscClient.BalanceAt(context.Background(), mulTreeRoot.Val.From, nil)
+		if err != nil {
+			log.Error(err)
+			return err
+		}
+	} else {
+		erc20Contract, err := contract.NewErc20Contract(common.HexToAddress(request.ContractAddress), p.BscClient)
+		if err != nil {
+			log.Error(err)
+			return err
+		}
+
+		mainAccountBalance, err = erc20Contract.BalanceOf(nil, mulTreeRoot.Val.From)
+		if err != nil {
+			log.Error(err)
+			return err
+		}
+	}
+
+	// query the whole tree, need  fund number
+	err = p.CountAmount(mulTreeRoot, request.ContractAddress, request.MinBalance, totalAmount)
+	if err != nil {
+		log.Error(err)
+		return err
+	}
+
+	// check main Account Balance ,if main Account Balance is not enough , notify user
+	if totalAmount.Cmp(mainAccountBalance) == 1 {
+		mainAccountBalance.Sub(totalAmount, mainAccountBalance)
+		return errors.New("mainAccount: " + p.PuppetWallets[0].From.String() + "balance is not enough, Please add" + util.ToDecimal(mainAccountBalance.String(), 18).String())
+	}
+
+	err = p.RecursionDiversifyFunds(request.ContractAddress, request.MinBalance, mulTreeRoot)
+	if err != nil {
+		log.Error(err)
+		return err
+	}
+
+	return nil
+}
+
+func (p *PuppetWallet) RecursionDiversifyFunds(contractAddress string, MinBalance string, mulTreeItem *WalletTree) error {
+	if mulTreeItem == nil {
+		return nil
+	}
+
+	//todo Open the coroutine to ensure that the leaf nodes on the same layer transmit funds at the same time.
+	for i := range mulTreeItem.Child {
+		log.Info("parentWalletAddress: ", mulTreeItem.Val.From, "walletAddress: ", mulTreeItem.Child[i].Val.From)
+		totalAmount := big.NewInt(0)
+		err := p.CountAmount(mulTreeItem.Child[i], contractAddress, MinBalance, totalAmount)
+		if err != nil {
+			log.Error(err)
+			return err
+		}
+
+		if totalAmount.Cmp(util.ToWei("0", 18)) == 0 {
+			log.Info("wallet balance is enough")
+			return err
+		}
+
+		log.Info("from: ", mulTreeItem.Val, "to: ", mulTreeItem.Child[i].Val, "amount", util.ToDecimal(totalAmount, 18).String())
+		err = p.SendFunds(contractAddress, totalAmount, mulTreeItem.Val, mulTreeItem.Child[i].Val)
+		if err != nil {
+			log.Error(err)
+			return err
+		}
+		//  Monitor the success of the transaction or sleep directly before proceeding to the next step.
+		time.Sleep(time.Second * 6)
+
+		err = p.RecursionDiversifyFunds(contractAddress, MinBalance, mulTreeItem.Child[i])
+		if err != nil {
+			log.Error(err)
+			return err
+		}
+
+	}
+	return nil
+}
+
+func (p *PuppetWallet) SendFunds(contractAddress string, sendAmount *big.Int, fromWallet *bind.TransactOpts, toWallet *bind.TransactOpts) error {
+
+	if contractAddress != "" {
+		// erc20 balance
+		erc20Contract, err := contract.NewErc20Contract(common.HexToAddress(contractAddress), p.BscClient)
+		if err != nil {
+			log.Error(err)
+			return err
+		}
+
+		_, err = erc20Contract.TransferFrom(fromWallet, fromWallet.From, toWallet.From, sendAmount)
+		if err != nil {
+			log.Error(err)
+			return err
+		}
+		return nil
+	}
+
+	nonce, err := p.BscClient.PendingNonceAt(context.Background(), fromWallet.From)
+	if err != nil {
+		log.Error(err)
+		return err
+	}
+	gasPrice, err := p.BscClient.SuggestGasPrice(context.Background())
+	if err != nil {
+		log.Error(err)
+		return err
+	}
+
+	gasLimit, err := p.BscClient.EstimateGas(context.Background(), ethereum.CallMsg{
+		From:  fromWallet.From,
+		To:    &toWallet.From,
+		Value: sendAmount,
+	})
+	if err != nil {
+		log.Error(err)
+		return err
+	}
+
+	signedTx, err := fromWallet.Signer(fromWallet.From, types.NewTx(
+		&types.LegacyTx{
+			Nonce:    nonce,
+			Gas:      gasLimit,
+			GasPrice: gasPrice,
+			Value:    sendAmount,
+			To:       &toWallet.From,
+		}))
+	if err != nil {
+		log.Error(err)
+		return err
+	}
+
+	err = p.BscClient.SendTransaction(context.Background(), signedTx)
+	if err != nil {
+		log.Error(err)
+		return err
+	}
+	log.Info("tx has been send ; hash", signedTx.Hash(), "from: ", fromWallet.From, "to: ", toWallet.From)
+	return nil
+}
+
+func (p *PuppetWallet) RecoveryFunds() {
+
+}
+
+func PrintTree(s *WalletTree) {
+	if s.Val == nil {
+		return
+	}
+	log.Info("root node: ", s.Val.From)
+	if len(s.Child) == 0 {
+		return
+	}
+	for i := range s.Child {
+		log.Info("child node: ", s.Child[i].Val.From, "-")
+	}
+	fmt.Println()
+	if len(s.Child) != 0 {
+		for i := range s.Child {
+			PrintTree(s.Child[i])
+		}
 	}
 }

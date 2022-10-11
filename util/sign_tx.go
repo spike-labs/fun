@@ -156,7 +156,7 @@ func SigRSV(isig interface{}) ([32]byte, [32]byte, uint8) {
 }
 
 func Random(min, max int) int {
-	rand.Seed(time.Now().Unix())
+	rand.Seed(time.Now().UnixNano())
 	r := rand.Intn(max - min)
 	return r + min
 }

@@ -68,5 +68,7 @@ type Contract struct {
 }
 
 type PuppetWallet struct {
-	PrivateKey []string `toml:"PrivateKey"`
+	PrivateKey    []string `toml:"PrivateKey"`
+	Mnemonic      string   `toml:"Mnemonic"`
+	AccountNumber int      `toml:"AccountNumber"`
 }
