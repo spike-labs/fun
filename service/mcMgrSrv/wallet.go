@@ -225,8 +225,8 @@ func (p *PuppetWallet) RecursionDiversifyFunds(contractAddress string, MinBalanc
 		return nil
 	}
 
-	//todo Open the coroutine to ensure that the leaf nodes on the same layer transmit funds at the same time.
 	for i := range mulTreeItem.Child {
+
 		log.Info("parentWalletAddress: ", mulTreeItem.Val.From, "walletAddress: ", mulTreeItem.Child[i].Val.From)
 
 		totalAmount := big.NewInt(0)
