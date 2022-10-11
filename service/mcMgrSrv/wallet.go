@@ -37,10 +37,6 @@ func NewPuppetWallet() *PuppetWallet {
 		panic("=== Spike log: ")
 	}
 
-	if len(config.Cfg.PuppetWallet.PrivateKey) == 0 {
-		panic("Please Deploy PuppetWallet")
-	}
-
 	id, err := bscClient.ChainID(context.Background())
 	if err != nil {
 		panic(err)
