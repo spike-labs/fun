@@ -141,7 +141,6 @@ func (p *PuppetWallet) CountAmount(root *WalletTree, contractAddress string, min
 		if balance.Cmp(minBalWei) == -1 {
 			balance.Sub(minBalWei, balance)
 			total.Add(total, balance)
-			total.Add(total, util.ToWei("0.001", 18))
 		}
 	} else {
 		// bnb balance
@@ -275,7 +274,7 @@ func (p *PuppetWallet) SendFunds(contractAddress string, sendAmount *big.Int, fr
 			log.Error(err)
 			return err
 		}
-		log.Info("tx has been send ; hash", signedTx.Hash(), "from: ", fromWallet.From, "to: ", toWallet.From)
+		log.Info("tx has been send ; hash", signedTx.Hash(), "from: ", fromWallet.From, "to: ", toWallet.From, "amount: ", util.ToDecimal(sendAmount, 18).String())
 		return nil
 	}
 
@@ -318,12 +317,74 @@ func (p *PuppetWallet) SendFunds(contractAddress string, sendAmount *big.Int, fr
 		log.Error(err)
 		return err
 	}
-	log.Info("tx has been send ; hash", signedTx.Hash(), "from: ", fromWallet.From, "to: ", toWallet.From)
+	log.Info("tx has been send ; hash", signedTx.Hash(), "from: ", fromWallet.From, "to: ", toWallet.From, "amount: ", util.ToDecimal(sendAmount, 18).String())
 	return nil
 }
 
-func (p *PuppetWallet) RecoveryFunds() {
+func (p *PuppetWallet) RecoveryFunds(request request.RecoveryFundsService) error {
 
+	switch request.ContractAddress {
+	case "":
+
+		for i := 1; i < len(p.PuppetWallets); i++ {
+			go func(index int) {
+
+				gas := util.ToWei("0.0005", 18)
+
+				bnbBalance, err := p.BscClient.BalanceAt(context.Background(), p.PuppetWallets[index].From, nil)
+				if err != nil {
+					log.Error(err)
+					return
+				}
+
+				if bnbBalance.Cmp(gas) == -1 {
+					return
+				}
+
+				sendBalance := big.NewInt(0)
+				sendBalance.Sub(bnbBalance, gas)
+
+				err = p.SendFunds(request.ContractAddress, sendBalance, p.PuppetWallets[index], p.PuppetWallets[0])
+				if err != nil {
+					log.Error(err)
+					return
+				}
+
+			}(i)
+		}
+
+		break
+	default:
+		erc20Contract, err := contract.NewErc20Contract(common.HexToAddress(request.ContractAddress), p.BscClient)
+		if err != nil {
+			log.Error(err)
+			return err
+		}
+
+		for i := 1; i < len(p.PuppetWallets); i++ {
+
+			go func(index int, contract *contract.Erc20Contract) {
+
+				tokenBalance, err := contract.BalanceOf(nil, p.PuppetWallets[index].From)
+				if err != nil {
+					log.Error(err)
+					return
+				}
+
+				if tokenBalance.Cmp(big.NewInt(1)) == -1 {
+					return
+				}
+
+				err = p.SendFunds(request.ContractAddress, tokenBalance, p.PuppetWallets[index], p.PuppetWallets[0])
+				if err != nil {
+					log.Error(err)
+					return
+				}
+			}(i, erc20Contract)
+
+		}
+	}
+	return nil
 }
 
 func PrintTree(s *WalletTree) {

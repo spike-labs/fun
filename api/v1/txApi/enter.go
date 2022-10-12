@@ -32,6 +32,7 @@ func (txGroup *TxGroup) InitTxGroup(g *gin.RouterGroup) {
 	funds := g.Group("fund")
 	{
 		funds.POST("/diversifyFunds", txGroup.DiversifyFunds)
+		funds.POST("/recoveryFunds", txGroup.RecoveryFunds)
 	}
 }
 
@@ -41,6 +42,7 @@ func (txGroup *TxGroup) AddStrategy(c *gin.Context) {
 	if err != nil {
 		log.Error("=== Spike log: ", err)
 		response.FailWithMessage("request params error", c)
+		return
 	}
 	uuid := txGroup.m.AddTradeStrategy(service)
 
@@ -53,6 +55,7 @@ func (txGroup *TxGroup) CancelStrategy(c *gin.Context) {
 	if err != nil {
 		log.Error("=== Spike log: ", err)
 		response.FailWithMessage("request params error", c)
+		return
 	}
 	txGroup.m.CancelStrategy(service.Uuid)
 
@@ -65,11 +68,31 @@ func (txGroup *TxGroup) DiversifyFunds(c *gin.Context) {
 	if err != nil {
 		log.Error("=== Spike log: ", err)
 		response.FailWithMessage("request params error", c)
+		return
 	}
 	err = txGroup.m.Wallet.DiversifyFunds(service)
 	if err != nil {
 		log.Error("=== Spike log: ", err)
 		response.Fail(c)
+		return
+	}
+
+	response.Ok(c)
+}
+
+func (txGroup *TxGroup) RecoveryFunds(c *gin.Context) {
+	var service request.RecoveryFundsService
+	err := c.ShouldBind(&service)
+	if err != nil {
+		log.Error("=== Spike log: ", err)
+		response.FailWithMessage("request params error", c)
+		return
+	}
+	err = txGroup.m.Wallet.RecoveryFunds(service)
+	if err != nil {
+		log.Error("=== Spike log: ", err)
+		response.Fail(c)
+		return
 	}
 
 	response.Ok(c)
