@@ -16,6 +16,7 @@ import (
 	"spike-mc-ops/config"
 	"spike-mc-ops/request"
 	"spike-mc-ops/util"
+	"sync"
 	"time"
 )
 
@@ -117,6 +118,7 @@ func CreateMultipleTree(dataLst []*bind.TransactOpts) *WalletTree {
 
 // CountAmount Recursively query the total number below the minimum limit under the node.
 func (p *PuppetWallet) CountAmount(root *WalletTree, contractAddress string, minBalance string, total *big.Int) error {
+	var wg sync.WaitGroup
 	if root == nil {
 		return nil
 	}
@@ -159,13 +161,17 @@ func (p *PuppetWallet) CountAmount(root *WalletTree, contractAddress string, min
 	}
 
 	for i := range root.Child {
-		err := p.CountAmount(root.Child[i], contractAddress, minBalance, total)
-		if err != nil {
-			log.Error(err)
-			return err
-		}
+		wg.Add(1)
+		go func(index int) {
+			defer wg.Done()
+			err := p.CountAmount(root.Child[index], contractAddress, minBalance, total)
+			if err != nil {
+				log.Error(err)
+			}
+		}(i)
 	}
 
+	wg.Wait()
 	return nil
 }
 
