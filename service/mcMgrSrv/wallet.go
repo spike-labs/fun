@@ -249,11 +249,12 @@ func (p *PuppetWallet) RecursionDiversifyFunds(contractAddress string, MinBalanc
 		//  Monitor the success of the transaction or sleep directly before proceeding to the next step.
 		time.Sleep(time.Second * 6)
 
-		err = p.RecursionDiversifyFunds(contractAddress, MinBalance, mulTreeItem.Child[i])
-		if err != nil {
-			log.Error(err)
-			return err
-		}
+		go func(index int) {
+			err = p.RecursionDiversifyFunds(contractAddress, MinBalance, mulTreeItem.Child[index])
+			if err != nil {
+				log.Error(err)
+			}
+		}(i)
 
 	}
 	return nil
