@@ -2,13 +2,15 @@ package v1
 
 import (
 	logger "github.com/ipfs/go-log"
+	"spike-mc-ops/api/v1/queryApi"
 	"spike-mc-ops/api/v1/txApi"
 )
 
 var log = logger.Logger("api")
 
 type RouterGroup struct {
-	TxGroup txApi.TxGroup
+	TxGroup    txApi.TxGroup
+	QueryGroup queryApi.QueryGroup
 }
 
 func NewRouterGroup() (RouterGroup, error) {
@@ -17,7 +19,14 @@ func NewRouterGroup() (RouterGroup, error) {
 		log.Error("===Spike log:", err)
 		return RouterGroup{}, err
 	}
+	queryGroup, err := queryApi.NewQueryGroup()
+	if err != nil {
+		log.Error("===Spike log:", err)
+		return RouterGroup{}, err
+	}
+
 	return RouterGroup{
-		TxGroup: txGroup,
+		TxGroup:    txGroup,
+		QueryGroup: queryGroup,
 	}, nil
 }

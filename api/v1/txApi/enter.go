@@ -26,24 +26,29 @@ func (txGroup *TxGroup) InitTxGroup(g *gin.RouterGroup) {
 	trade := g.Group("trade")
 	{
 		trade.POST("/addStrategy", txGroup.AddStrategy)
-		trade.POST("/cancelStrategy", txGroup.AddStrategy)
-
+		trade.POST("/cancelStrategy", txGroup.CancelStrategy)
 	}
 	funds := g.Group("fund")
 	{
 		funds.POST("/diversifyFunds", txGroup.DiversifyFunds)
 		funds.POST("/recoveryFunds", txGroup.RecoveryFunds)
 	}
+	info := g.Group("info")
+	{
+		info.GET("/walletBalance", txGroup.m.QueryWalletBalance)
+		info.GET("/queryStrategy", txGroup.m.QueryStrategy)
+	}
 }
 
 func (txGroup *TxGroup) AddStrategy(c *gin.Context) {
 	var service request.TradeStrategyService
-	err := c.ShouldBind(&service)
+	err := c.ShouldBindJSON(&service)
 	if err != nil {
 		log.Error("=== Spike log: ", err)
 		response.FailWithMessage("request params error", c)
 		return
 	}
+	log.Infof("params: %v", service)
 	uuid := txGroup.m.AddTradeStrategy(service)
 
 	response.OkWithData(uuid, c)
@@ -51,7 +56,7 @@ func (txGroup *TxGroup) AddStrategy(c *gin.Context) {
 
 func (txGroup *TxGroup) CancelStrategy(c *gin.Context) {
 	var service request.DelTradeStrategyService
-	err := c.ShouldBind(&service)
+	err := c.ShouldBindJSON(&service)
 	if err != nil {
 		log.Error("=== Spike log: ", err)
 		response.FailWithMessage("request params error", c)
@@ -64,12 +69,13 @@ func (txGroup *TxGroup) CancelStrategy(c *gin.Context) {
 
 func (txGroup *TxGroup) DiversifyFunds(c *gin.Context) {
 	var service request.DiversifyFundsService
-	err := c.ShouldBind(&service)
+	err := c.ShouldBindJSON(&service)
 	if err != nil {
 		log.Error("=== Spike log: ", err)
 		response.FailWithMessage("request params error", c)
 		return
 	}
+	log.Infof("params: %v", service)
 	err = txGroup.m.Wallet.DiversifyFunds(service)
 	if err != nil {
 		log.Error("=== Spike log: ", err)
@@ -82,12 +88,13 @@ func (txGroup *TxGroup) DiversifyFunds(c *gin.Context) {
 
 func (txGroup *TxGroup) RecoveryFunds(c *gin.Context) {
 	var service request.RecoveryFundsService
-	err := c.ShouldBind(&service)
+	err := c.ShouldBindJSON(&service)
 	if err != nil {
 		log.Error("=== Spike log: ", err)
 		response.FailWithMessage("request params error", c)
 		return
 	}
+	log.Infof("params: %v", service)
 	err = txGroup.m.Wallet.RecoveryFunds(service)
 	if err != nil {
 		log.Error("=== Spike log: ", err)

@@ -1,17 +1,7 @@
-package request
+package response
 
-type TradeStrategy struct {
-	Price             map[int]string
-	ExecTime          int64
-	Amount            map[int]string
-	Frequency         int64
-	SlippageTolerance int64
-	Work              bool
-
-	Closing chan struct{}
-}
-
-type TradeStrategyService struct {
+type TradeStrategyResponse struct {
+	Uuid string `json:"uuid" form:"uuid"`
 	// Purchase price, low price
 	BuyPrice string `json:"buy_price" form:"buy_price"`
 	// Sell price ,high price
@@ -26,9 +16,4 @@ type TradeStrategyService struct {
 	Frequency int64 `json:"frequency" form:"frequency"`
 	// The sliding point of this transaction, set the minimum amount obtained by this flash exchange through the subparameter.Unit: kilobit
 	SlippageTolerance int64 `json:"slippage_tolerance" form:"slippage_tolerance"`
-	Work              bool
-}
-
-type DelTradeStrategyService struct {
-	Uuid string `json:"uuid" form:"uuid" binding:"required"`
 }

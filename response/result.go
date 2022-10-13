@@ -14,6 +14,7 @@ type Response struct {
 const (
 	ERROR   = 500
 	SUCCESS = 200
+	NoAuth  = 401
 )
 
 func Result(code int, data interface{}, msg string, c *gin.Context) {
@@ -48,6 +49,6 @@ func FailWithMessage(message string, c *gin.Context) {
 	Result(ERROR, map[string]interface{}{}, message, c)
 }
 
-func FailWithDetailed(data interface{}, message string, c *gin.Context) {
-	Result(ERROR, data, message, c)
+func FailWithNoAuth(message string, c *gin.Context) {
+	Result(NoAuth, map[string]interface{}{}, message, c)
 }

@@ -6,12 +6,15 @@ import (
 	swaggerFiles "github.com/swaggo/files"
 	ginSwagger "github.com/swaggo/gin-swagger"
 	v1 "spike-mc-ops/api/v1"
+	"spike-mc-ops/middleware"
 )
 
 var log = logger.Logger("initialize")
 
 func initRouter() (*gin.Engine, error) {
 	var r = gin.Default()
+	r.Use(middleware.Cors())
+	r.Use(middleware.TokenAuth())
 	publicGroup := r.Group("")
 	{
 		// health
@@ -27,6 +30,10 @@ func initRouter() (*gin.Engine, error) {
 	txGroup := routerGroupApp.TxGroup
 	txApiGroup := r.Group("/trade-api/v1")
 	txGroup.InitTxGroup(txApiGroup)
+
+	queryGroup := routerGroupApp.QueryGroup
+	queryApiGroup := r.Group("/query-api/v1")
+	queryGroup.InitQueryGroup(queryApiGroup)
 
 	r.GET("/swagger/*any", ginSwagger.WrapHandler(swaggerFiles.Handler))
 	return r, nil

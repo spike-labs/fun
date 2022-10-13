@@ -50,7 +50,8 @@ type Chain struct {
 }
 
 type System struct {
-	Port string `toml:"Port"`
+	Port  string `toml:"Port"`
+	Token string `toml:"Token"`
 }
 
 type Redis struct {

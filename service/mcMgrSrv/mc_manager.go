@@ -1,17 +1,24 @@
 package mcMgrSrv
 
 import (
+	"context"
 	"github.com/ethereum/go-ethereum/common"
+	"github.com/ethereum/go-ethereum/ethclient"
+	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
 	logger "github.com/ipfs/go-log"
 	"github.com/shopspring/decimal"
 	"math/big"
 	"math/rand"
+	"spike-mc-ops/chain/contract"
 	"spike-mc-ops/config"
 	"spike-mc-ops/constant"
+	"spike-mc-ops/model"
 	"spike-mc-ops/request"
+	"spike-mc-ops/response"
 	"spike-mc-ops/util"
 	"strconv"
+	"sync"
 	"time"
 )
 
@@ -63,6 +70,29 @@ func (m *MCManager) AddTradeStrategy(t request.TradeStrategyService) string {
 
 func (m *MCManager) CancelStrategy(u string) {
 	m.Strategies[u].Closing <- struct{}{}
+	delete(m.Strategies, u)
+}
+
+func (m *MCManager) QueryStrategy(c *gin.Context) {
+	var strategyList []response.TradeStrategyResponse
+	for key, value := range m.Strategies {
+		strategyList = append(strategyList, response.TradeStrategyResponse{
+			Uuid:              key,
+			BuyPrice:          value.Price[constant.BUY_PRICE],
+			SellPrice:         value.Price[constant.SELL_PRICE],
+			TotalAmount:       value.Amount[constant.TOTAL_AMOUNT],
+			SingleAmount:      value.Amount[constant.SINGLE_AMOUNT],
+			ExecTime:          value.ExecTime,
+			Frequency:         value.Frequency,
+			SlippageTolerance: value.SlippageTolerance,
+		})
+	}
+	log.Infof("startegyList : %v", strategyList)
+	if len(strategyList) == 0 {
+		response.OkWithData([]response.TradeStrategyResponse{}, c)
+		return
+	}
+	response.OkWithData(strategyList, c)
 }
 
 // ExecStrategy Buy or sell recursively according to the strategy.
@@ -130,6 +160,7 @@ loop:
 			break loop
 
 		case <-strategy.Closing:
+			log.Infof("strategy close...")
 			break loop
 		}
 	}
@@ -182,12 +213,12 @@ func (m *MCManager) SwapToken(uuid string, path []common.Address, flag int) (int
 			return 0, err
 		}
 
-		tokens, err := m.Wallet.Router.SwapExactTokensForTokens(singer, util.ToWei(strconv.FormatInt(amountInResult, 10), 18), big.NewInt(amountOutResult), path, singer.From, big.NewInt(deadline))
+		tx, err := m.Wallet.Router.SwapExactTokensForTokens(singer, util.ToWei(strconv.FormatInt(amountInResult, 10), 18), big.NewInt(amountOutResult), path, singer.From, big.NewInt(deadline))
 		if err != nil {
 			log.Error(err)
 			return 0, err
 		}
-		log.Info("transaction is already send", tokens)
+		log.Infof("transaction is already send : %s", tx.Hash().String())
 
 	case constant.SELL_OP:
 		var internalPath []common.Address
@@ -220,4 +251,62 @@ func (m *MCManager) SwapToken(uuid string, path []common.Address, flag int) (int
 	}
 
 	return amountInResult, nil
+}
+
+func (m *MCManager) QueryWalletBalance(c *gin.Context) {
+	var walletInfo []model.WalletInfo
+	var lock sync.Mutex
+	var wg sync.WaitGroup
+
+	client, err := ethclient.Dial(config.Cfg.Chain.RpcNodeAddress)
+	if err != nil {
+		log.Errorf("ethClient dial err :%v", err)
+		response.FailWithMessage(err.Error(), c)
+		return
+	}
+	gameTokenContract, err := contract.NewErc20Contract(common.HexToAddress(config.Cfg.Contract.GameTokenAddress), client)
+	if err != nil {
+		log.Errorf("construct gameTokenContract err :%v", err)
+		response.FailWithMessage(err.Error(), c)
+		return
+	}
+	usdcContract, err := contract.NewErc20Contract(common.HexToAddress(config.Cfg.Contract.UsdcAddress), client)
+	if err != nil {
+		log.Errorf("construct usdcContract err :%v", err)
+		response.FailWithMessage(err.Error(), c)
+		return
+	}
+	throttle := make(chan struct{}, 5)
+	for _, wallet := range m.Wallet.PuppetWallets {
+		wg.Add(1)
+		throttle <- struct{}{}
+		go func(walletAddr common.Address) {
+			defer func() {
+				wg.Done()
+				<-throttle
+			}()
+			bnbBalance, err := client.BalanceAt(context.Background(), walletAddr, nil)
+			if err != nil {
+				return
+			}
+			gameTokenBalance, err := gameTokenContract.BalanceOf(nil, walletAddr)
+			if err != nil {
+				return
+			}
+			usdcBalance, err := usdcContract.BalanceOf(nil, walletAddr)
+			if err != nil {
+				return
+			}
+			lock.Lock()
+			walletInfo = append(walletInfo, model.WalletInfo{
+				WalletAddr:  walletAddr.String(),
+				BnbBalance:  util.ToDecimal(bnbBalance.String(), 18).String(),
+				USDCBalance: util.ToDecimal(usdcBalance.String(), 18).String(),
+				SKSBalance:  util.ToDecimal(gameTokenBalance.String(), 18).String(),
+			})
+			lock.Unlock()
+		}(wallet.From)
+	}
+	wg.Wait()
+	response.OkWithData(walletInfo, c)
 }
