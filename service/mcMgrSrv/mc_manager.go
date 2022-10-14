@@ -2,6 +2,7 @@ package mcMgrSrv
 
 import (
 	"context"
+	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/ethclient"
 	"github.com/gin-gonic/gin"
@@ -159,6 +160,8 @@ loop:
 				}
 
 			}
+
+			ticker.Reset(time.Duration(util.Random(int(strategy.Frequency), int(strategy.Frequency+10))) * time.Second)
 		case <-deadlineTicker.C:
 			log.Infof("deadlineTicker..")
 			delete(m.Strategies, uuid)
@@ -282,6 +285,9 @@ func (m *MCManager) QueryWalletBalance(c *gin.Context) {
 		response.FailWithMessage(err.Error(), c)
 		return
 	}
+
+	height, err := client.BlockNumber(context.Background())
+	yHeight := height - 28800
 	throttle := make(chan struct{}, 5)
 	for _, wallet := range m.Wallet.PuppetWallets {
 		wg.Add(1)
@@ -291,6 +297,12 @@ func (m *MCManager) QueryWalletBalance(c *gin.Context) {
 				wg.Done()
 				<-throttle
 			}()
+
+			SKSEarningsToday := big.NewInt(0)
+			USDCEarningsToday := big.NewInt(0)
+			gameTokenCumulativeEarnings := *big.NewInt(0)
+			USDCCumulativeEarnings := *big.NewInt(0)
+
 			bnbBalance, err := client.BalanceAt(context.Background(), walletAddr, nil)
 			if err != nil {
 				return
@@ -303,12 +315,27 @@ func (m *MCManager) QueryWalletBalance(c *gin.Context) {
 			if err != nil {
 				return
 			}
+
+			yGameTokenBalance, err := gameTokenContract.BalanceOf(&bind.CallOpts{BlockNumber: big.NewInt(int64(yHeight))}, walletAddr)
+
+			yusdcBalance, err := usdcContract.BalanceOf(&bind.CallOpts{BlockNumber: big.NewInt(int64(yHeight))}, walletAddr)
+
+			SKSEarningsToday.Sub(gameTokenBalance, yGameTokenBalance)
+			USDCEarningsToday.Sub(usdcBalance, yusdcBalance)
+
+			gameTokenCumulativeEarnings.Sub(gameTokenBalance, big.NewInt(int64(config.Cfg.PuppetWallet.GameTokenCost)))
+			USDCCumulativeEarnings.Sub(usdcBalance, big.NewInt(int64(config.Cfg.PuppetWallet.USDCCost)))
+
 			lock.Lock()
 			walletInfo = append(walletInfo, model.WalletInfo{
-				WalletAddr:  walletAddr.String(),
-				BnbBalance:  util.ToDecimal(bnbBalance.String(), 18).String(),
-				USDCBalance: util.ToDecimal(usdcBalance.String(), 18).String(),
-				SKSBalance:  util.ToDecimal(gameTokenBalance.String(), 18).String(),
+				WalletAddr:             walletAddr.String(),
+				BnbBalance:             util.ToDecimal(bnbBalance.String(), 18).String(),
+				USDCBalance:            util.ToDecimal(usdcBalance.String(), 18).String(),
+				SKSBalance:             util.ToDecimal(gameTokenBalance.String(), 18).String(),
+				SKSEarningsToday:       util.ToDecimal(SKSEarningsToday.String(), 18).String(),
+				USDCEarningsToday:      util.ToDecimal(USDCEarningsToday.String(), 18).String(),
+				SKSCumulativeEarnings:  util.ToDecimal(gameTokenCumulativeEarnings.String(), 18).String(),
+				USDCCumulativeEarnings: util.ToDecimal(USDCCumulativeEarnings.String(), 18).String(),
 			})
 			lock.Unlock()
 		}(wallet.From)

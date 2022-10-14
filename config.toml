@@ -32,6 +32,8 @@ MaxOpenConns = 0
 [PuppetWallet]
 Mnemonic = "ritual address enroll inform pioneer apple senior crash moment name dog elephant"
 AccountNumber = 10
+GameTokenCost = 2000
+USDCCost = 200
 
 [Game]
 DefaultPassword = "807497a6f2d597c512d8b247c2158054" #12345678

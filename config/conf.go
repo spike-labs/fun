@@ -72,4 +72,6 @@ type PuppetWallet struct {
 	PrivateKey    []string `toml:"PrivateKey"`
 	Mnemonic      string   `toml:"Mnemonic"`
 	AccountNumber int      `toml:"AccountNumber"`
+	GameTokenCost int      `toml:"GameTokenCost"`
+	USDCCost      int      `toml:"UsdcCost"`
 }
