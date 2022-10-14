@@ -16,7 +16,6 @@ import (
 	"spike-mc-ops/config"
 	"spike-mc-ops/request"
 	"spike-mc-ops/util"
-	"sync"
 	"time"
 )
 
@@ -118,7 +117,6 @@ func CreateMultipleTree(dataLst []*bind.TransactOpts) *WalletTree {
 
 // CountAmount Recursively query the total number below the minimum limit under the node.
 func (p *PuppetWallet) CountAmount(root *WalletTree, contractAddress string, minBalance string, total *big.Int) error {
-	var wg sync.WaitGroup
 	if root == nil {
 		return nil
 	}
@@ -161,17 +159,14 @@ func (p *PuppetWallet) CountAmount(root *WalletTree, contractAddress string, min
 	}
 
 	for i := range root.Child {
-		wg.Add(1)
-		go func(index int) {
-			defer wg.Done()
-			err := p.CountAmount(root.Child[index], contractAddress, minBalance, total)
-			if err != nil {
-				log.Error(err)
-			}
-		}(i)
+
+		err := p.CountAmount(root.Child[i], contractAddress, minBalance, total)
+		if err != nil {
+			log.Error(err)
+		}
+
 	}
 
-	wg.Wait()
 	return nil
 }
 
@@ -253,14 +248,12 @@ func (p *PuppetWallet) RecursionDiversifyFunds(contractAddress string, MinBalanc
 			return err
 		}
 		//  Monitor the success of the transaction or sleep directly before proceeding to the next step.
-		time.Sleep(time.Second * 6)
+		time.Sleep(time.Second * 12)
 
-		go func(index int) {
-			err = p.RecursionDiversifyFunds(contractAddress, MinBalance, mulTreeItem.Child[index])
-			if err != nil {
-				log.Error(err)
-			}
-		}(i)
+		err = p.RecursionDiversifyFunds(contractAddress, MinBalance, mulTreeItem.Child[i])
+		if err != nil {
+			log.Error(err)
+		}
 
 	}
 	return nil
