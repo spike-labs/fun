@@ -69,8 +69,10 @@ func (m *MCManager) AddTradeStrategy(t request.TradeStrategyService) string {
 }
 
 func (m *MCManager) CancelStrategy(u string) {
-	m.Strategies[u].Closing <- struct{}{}
-	delete(m.Strategies, u)
+	if _, have := m.Strategies[u]; have {
+		m.Strategies[u].Closing <- struct{}{}
+		delete(m.Strategies, u)
+	}
 }
 
 func (m *MCManager) QueryStrategy(c *gin.Context) {
@@ -126,6 +128,7 @@ loop:
 		case <-ticker.C:
 
 			if alreadyUsedQuota >= amount {
+				delete(m.Strategies, uuid)
 				log.Info("strategy fund use done")
 				break loop
 			}
@@ -157,9 +160,12 @@ loop:
 
 			}
 		case <-deadlineTicker.C:
+			log.Infof("deadlineTicker..")
+			delete(m.Strategies, uuid)
 			break loop
 
 		case <-strategy.Closing:
+			delete(m.Strategies, uuid)
 			log.Infof("strategy close...")
 			break loop
 		}
