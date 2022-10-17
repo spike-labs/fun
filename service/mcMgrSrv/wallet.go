@@ -14,6 +14,7 @@ import (
 	"math/rand"
 	contract "spike-mc-ops/chain/contract"
 	"spike-mc-ops/config"
+	"spike-mc-ops/constant"
 	"spike-mc-ops/request"
 	"spike-mc-ops/util"
 	"time"
@@ -269,6 +270,7 @@ func (p *PuppetWallet) SendFunds(contractAddress string, sendAmount *big.Int, fr
 			return err
 		}
 
+		fromWallet.GasPrice = big.NewInt(constant.G_WEI)
 		signedTx, err := erc20Contract.Transfer(fromWallet, toWallet.From, sendAmount)
 		if err != nil {
 			log.Error(err)
@@ -283,16 +285,12 @@ func (p *PuppetWallet) SendFunds(contractAddress string, sendAmount *big.Int, fr
 		log.Error(err)
 		return err
 	}
-	gasPrice, err := p.BscClient.SuggestGasPrice(context.Background())
-	if err != nil {
-		log.Error(err)
-		return err
-	}
 
 	gasLimit, err := p.BscClient.EstimateGas(context.Background(), ethereum.CallMsg{
-		From:  fromWallet.From,
-		To:    &toWallet.From,
-		Value: sendAmount,
+		From:     fromWallet.From,
+		To:       &toWallet.From,
+		Value:    sendAmount,
+		GasPrice: big.NewInt(constant.G_WEI),
 	})
 	if err != nil {
 		log.Error(err)
@@ -303,7 +301,7 @@ func (p *PuppetWallet) SendFunds(contractAddress string, sendAmount *big.Int, fr
 		&types.LegacyTx{
 			Nonce:    nonce,
 			Gas:      gasLimit,
-			GasPrice: gasPrice,
+			GasPrice: big.NewInt(constant.G_WEI),
 			Value:    sendAmount,
 			To:       &toWallet.From,
 		}))

@@ -185,6 +185,7 @@ func (m *MCManager) SwapToken(uuid string, path []common.Address, flag int) (int
 
 	rand.Seed(time.Now().Unix())
 	singer := m.Wallet.PuppetWallets[rand.Intn(len(m.Wallet.PuppetWallets))]
+	singer.GasPrice = big.NewInt(constant.G_WEI)
 
 	deadline := time.Now().Add(time.Minute * 10).Unix()
 
@@ -317,8 +318,16 @@ func (m *MCManager) QueryWalletBalance(c *gin.Context) {
 			}
 
 			yGameTokenBalance, err := gameTokenContract.BalanceOf(&bind.CallOpts{BlockNumber: big.NewInt(int64(yHeight))}, walletAddr)
+			if err != nil {
+				log.Error(err)
+				return
+			}
 
 			yusdcBalance, err := usdcContract.BalanceOf(&bind.CallOpts{BlockNumber: big.NewInt(int64(yHeight))}, walletAddr)
+			if err != nil {
+				log.Error(err)
+				return
+			}
 
 			SKSEarningsToday.Sub(gameTokenBalance, yGameTokenBalance)
 			USDCEarningsToday.Sub(usdcBalance, yusdcBalance)

@@ -27,3 +27,7 @@ const (
 	BUY_OP = iota + 1
 	SELL_OP
 )
+
+const (
+	G_WEI = 10000000000
+)
