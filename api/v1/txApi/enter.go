@@ -104,3 +104,22 @@ func (txGroup *TxGroup) RecoveryFunds(c *gin.Context) {
 
 	response.Ok(c)
 }
+
+func (txGroup *TxGroup) BuyNFT(c *gin.Context) {
+	var service request.BuyNFTService
+	err := c.ShouldBindJSON(&service)
+	if err != nil {
+		log.Error("=== Spike log: ", err)
+		response.FailWithMessage("request params error", c)
+		return
+	}
+	if service.BuyAmount <= 0 || service.Time <= 0 {
+		response.FailWithMessage("request params error", c)
+		return
+	}
+
+	log.Infof("params: %v", service)
+	uuid := txGroup.m.AddBuyNFTStrategy(service)
+
+	response.OkWithData(uuid, c)
+}

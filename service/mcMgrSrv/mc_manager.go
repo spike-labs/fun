@@ -26,8 +26,9 @@ import (
 var log = logger.Logger("mc")
 
 type MCManager struct {
-	Strategies map[string]request.TradeStrategy
-	Wallet     *PuppetWallet
+	Strategies       map[string]request.TradeStrategy
+	BuyNFTStrategies map[string]request.BuyNFTStrategy
+	Wallet           *PuppetWallet
 }
 
 func NewMCManager() *MCManager {
@@ -35,12 +36,13 @@ func NewMCManager() *MCManager {
 	puppetWallet := NewPuppetWallet()
 
 	m := &MCManager{
-		Wallet:     puppetWallet,
-		Strategies: make(map[string]request.TradeStrategy, 0),
+		Wallet:           puppetWallet,
+		Strategies:       make(map[string]request.TradeStrategy, 0),
+		BuyNFTStrategies: make(map[string]request.BuyNFTStrategy, 0),
 	}
 
 	for i := range m.Wallet.PuppetWallets {
-		log.Infof("MCManager info :%v", m.Wallet.PuppetWallets[i])
+		log.Infof("MCManager info :%v", m.Wallet.PuppetWallets[i].From)
 	}
 
 	return m
@@ -223,7 +225,7 @@ func (m *MCManager) SwapToken(uuid string, path []common.Address, flag int) (int
 			return 0, err
 		}
 
-		tx, err := m.Wallet.Router.SwapExactTokensForTokens(singer, util.ToWei(strconv.FormatInt(amountInResult, 10), 18), big.NewInt(amountOutResult), path, singer.From, big.NewInt(deadline))
+		tx, err := m.Wallet.Router.SwapExactTokensForTokens(singer, util.ToWei(strconv.FormatInt(amountInResult, 10), 18), util.ToWei(strconv.FormatInt(amountOutResult, 10), 18), path, singer.From, big.NewInt(deadline))
 		if err != nil {
 			log.Error(err)
 			return 0, err
@@ -252,7 +254,7 @@ func (m *MCManager) SwapToken(uuid string, path []common.Address, flag int) (int
 		}
 		log.Info("amountIn: ", amountIn[len(amountIn)-1], "minAmount: ", big.NewInt(amountOutResult), singer.From, big.NewInt(deadline), "interPath", internalPath)
 
-		tokens, err := m.Wallet.Router.SwapExactTokensForTokens(singer, amountIn[len(amountIn)-1], big.NewInt(amountOutResult), path, singer.From, big.NewInt(deadline))
+		tokens, err := m.Wallet.Router.SwapExactTokensForTokens(singer, amountIn[len(amountIn)-1], util.ToWei(strconv.FormatInt(amountOutResult, 10), 18), path, singer.From, big.NewInt(deadline))
 		if err != nil {
 			log.Error(err)
 			return 0, err
