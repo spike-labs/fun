@@ -17,7 +17,6 @@ import (
 	"spike-mc-ops/constant"
 	"spike-mc-ops/request"
 	"spike-mc-ops/util"
-	"sync"
 	"time"
 )
 
@@ -28,7 +27,6 @@ type PuppetWallet struct {
 }
 
 func NewPuppetWallet() *PuppetWallet {
-	var wg sync.WaitGroup
 	bscClient, err := ethclient.Dial(config.Cfg.Chain.RpcNodeAddress)
 	if err != nil {
 		panic("=== Spike log: ")
@@ -46,32 +44,28 @@ func NewPuppetWallet() *PuppetWallet {
 	puppetWallets := make([]*bind.TransactOpts, 0)
 
 	for i := 0; i < config.Cfg.PuppetWallet.AccountNumber; i++ {
-		wg.Add(1)
-		go func(index int) {
-			defer wg.Done()
-			priKeyString, err := util.DerivePrivateKeyWithNumber(config.Cfg.PuppetWallet.Mnemonic, index)
-			if err != nil {
-				panic(err)
-			}
 
-			priKey, err := crypto.HexToECDSA(priKeyString[2:])
-			if err != nil {
-				panic(err)
-			}
+		priKeyString, err := util.DerivePrivateKeyWithNumber(config.Cfg.PuppetWallet.Mnemonic, i)
+		if err != nil {
+			panic(err)
+		}
 
-			opts, err := bind.NewKeyedTransactorWithChainID(priKey, id)
-			if err != nil {
-				panic(err)
-			}
+		priKey, err := crypto.HexToECDSA(priKeyString[2:])
+		if err != nil {
+			panic(err)
+		}
 
-			puppetWallets = append(puppetWallets, opts)
+		opts, err := bind.NewKeyedTransactorWithChainID(priKey, id)
+		if err != nil {
+			panic(err)
+		}
 
-			util.CheckAllowance(priKeyString, config.Cfg.Contract.UsdcAddress, config.Cfg.Contract.PanCakeRouterAddress, id, bscClient)
-			util.CheckAllowance(priKeyString, config.Cfg.Contract.GameTokenAddress, config.Cfg.Contract.PanCakeRouterAddress, id, bscClient)
-		}(i)
+		puppetWallets = append(puppetWallets, opts)
+
+		util.CheckAllowance(priKeyString, config.Cfg.Contract.UsdcAddress, config.Cfg.Contract.PanCakeRouterAddress, id, bscClient)
+		util.CheckAllowance(priKeyString, config.Cfg.Contract.GameTokenAddress, config.Cfg.Contract.PanCakeRouterAddress, id, bscClient)
 
 	}
-	wg.Wait()
 	return &PuppetWallet{
 		BscClient:     bscClient,
 		Router:        router,
