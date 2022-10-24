@@ -17,6 +17,7 @@ type Config struct {
 	PuppetWallet PuppetWallet `toml:"PuppetWallet"`
 	GameInfo     GameInfo     `toml:"Game"`
 	Moralis      Moralis      `toml:"Moralis"`
+	WhiteList    WhiteList    `toml:"WhiteList"`
 }
 
 type Moralis struct {
@@ -66,6 +67,7 @@ type Contract struct {
 	NftAddress              string `toml:"NftAddress"`
 	GameVaultAddress        string `toml:"GameVaultAddress"`
 	PanCakeRouterAddress    string `toml:"PanCakeRouterAddress"`
+	NFTDistributionAddress  string `toml:"NFTDistributionAddress"`
 }
 
 type PuppetWallet struct {
@@ -74,4 +76,8 @@ type PuppetWallet struct {
 	AccountNumber int      `toml:"AccountNumber"`
 	GameTokenCost int      `toml:"GameTokenCost"`
 	USDCCost      int      `toml:"UsdcCost"`
+}
+
+type WhiteList struct {
+	Address []string `toml:"Address"`
 }

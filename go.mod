@@ -4,6 +4,8 @@ go 1.18
 
 require (
 	github.com/BurntSushi/toml v1.2.0
+	github.com/Fueav/merkletree v0.0.2
+	github.com/cbergoon/merkletree v0.2.0
 	github.com/ethereum/go-ethereum v1.10.25
 	github.com/fsnotify/fsnotify v1.5.4
 	github.com/fvbock/endless v0.0.0-20170109170031-447134032cb6

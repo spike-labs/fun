@@ -13,6 +13,7 @@ import (
 	"reflect"
 	"regexp"
 	"strconv"
+	"strings"
 	"time"
 )
 
@@ -81,6 +82,13 @@ func IsZeroAddress(iaddress interface{}) bool {
 	zeroAddressBytes := common.FromHex("0x0000000000000000000000000000000000000000")
 	addressBytes := address.Bytes()
 	return reflect.DeepEqual(addressBytes, zeroAddressBytes)
+}
+
+func TailorWalletPrefix(address string) string {
+	if !strings.HasPrefix(address, "0x") {
+		return address
+	}
+	return address[2:]
 }
 
 // ToDecimal wei to decimals

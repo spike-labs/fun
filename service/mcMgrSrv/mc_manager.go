@@ -2,6 +2,7 @@ package mcMgrSrv
 
 import (
 	"context"
+	"github.com/Fueav/merkletree"
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/ethclient"
@@ -9,6 +10,7 @@ import (
 	"github.com/google/uuid"
 	logger "github.com/ipfs/go-log"
 	"github.com/shopspring/decimal"
+	"golang.org/x/crypto/sha3"
 	"math/big"
 	"math/rand"
 	"spike-mc-ops/chain/contract"
@@ -29,9 +31,19 @@ type MCManager struct {
 	Strategies       map[string]request.TradeStrategy
 	BuyNFTStrategies map[string]request.BuyNFTStrategy
 	Wallet           *PuppetWallet
+	WhiteList        *merkletree.MerkleTree
 }
 
 func NewMCManager() *MCManager {
+	var list []merkletree.Content
+
+	for i := range config.Cfg.WhiteList.Address {
+		list = append(list, util.UserInfo{Address: util.TailorWalletPrefix(config.Cfg.WhiteList.Address[i])})
+	}
+	whiteTree, err := merkletree.NewTreeWithHashStrategy(list, sha3.NewLegacyKeccak256)
+	if err != nil {
+		panic(err)
+	}
 
 	puppetWallet := NewPuppetWallet()
 
@@ -39,6 +51,7 @@ func NewMCManager() *MCManager {
 		Wallet:           puppetWallet,
 		Strategies:       make(map[string]request.TradeStrategy, 0),
 		BuyNFTStrategies: make(map[string]request.BuyNFTStrategy, 0),
+		WhiteList:        whiteTree,
 	}
 
 	for i := range m.Wallet.PuppetWallets {

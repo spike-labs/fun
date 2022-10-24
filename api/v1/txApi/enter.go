@@ -38,6 +38,10 @@ func (txGroup *TxGroup) InitTxGroup(g *gin.RouterGroup) {
 		info.GET("/walletBalance", txGroup.m.QueryWalletBalance)
 		info.GET("/queryStrategy", txGroup.m.QueryStrategy)
 	}
+	nft := g.Group("nft")
+	{
+		nft.POST("/buyNFT", txGroup.BuyNFT)
+	}
 }
 
 func (txGroup *TxGroup) AddStrategy(c *gin.Context) {
