@@ -41,6 +41,7 @@ func (txGroup *TxGroup) InitTxGroup(g *gin.RouterGroup) {
 	nft := g.Group("nft")
 	{
 		nft.POST("/buyNFT", txGroup.BuyNFT)
+		nft.POST("/cancelNFTStrategy", txGroup.CancelBuyNFTStrategy)
 	}
 }
 
@@ -126,4 +127,17 @@ func (txGroup *TxGroup) BuyNFT(c *gin.Context) {
 	uuid := txGroup.m.AddBuyNFTStrategy(service)
 
 	response.OkWithData(uuid, c)
+}
+
+func (txGroup *TxGroup) CancelBuyNFTStrategy(c *gin.Context) {
+	var service request.DelBuyStrategyService
+	err := c.ShouldBindJSON(&service)
+	if err != nil {
+		log.Error("=== Spike log: ", err)
+		response.FailWithMessage("request params error", c)
+		return
+	}
+	txGroup.m.CancelBuyNFTStrategy(service.Uuid)
+
+	response.Ok(c)
 }

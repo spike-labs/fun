@@ -13,3 +13,7 @@ type BuyNFTStrategy struct {
 	LeftAmount int64
 	Closing    chan struct{}
 }
+
+type DelBuyStrategyService struct {
+	Uuid string `json:"uuid" form:"uuid" binding:"required"`
+}

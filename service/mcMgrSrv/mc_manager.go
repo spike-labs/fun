@@ -29,7 +29,7 @@ var log = logger.Logger("mc")
 
 type MCManager struct {
 	Strategies       map[string]request.TradeStrategy
-	BuyNFTStrategies map[string]request.BuyNFTStrategy
+	BuyNFTStrategies map[string]*request.BuyNFTStrategy
 	Wallet           *PuppetWallet
 	WhiteList        *merkletree.MerkleTree
 }
@@ -50,7 +50,7 @@ func NewMCManager() *MCManager {
 	m := &MCManager{
 		Wallet:           puppetWallet,
 		Strategies:       make(map[string]request.TradeStrategy, 0),
-		BuyNFTStrategies: make(map[string]request.BuyNFTStrategy, 0),
+		BuyNFTStrategies: make(map[string]*request.BuyNFTStrategy, 0),
 		WhiteList:        whiteTree,
 	}
 

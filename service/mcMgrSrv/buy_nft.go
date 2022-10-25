@@ -16,7 +16,7 @@ import (
 
 func (m *MCManager) AddBuyNFTStrategy(t request.BuyNFTService) string {
 	u := uuid.New().String()
-	buyNFTStrategy := request.BuyNFTStrategy{
+	buyNFTStrategy := &request.BuyNFTStrategy{
 		Time:      t.Time,
 		BuyAmount: t.BuyAmount,
 		Closing:   make(chan struct{}, 0),
@@ -31,15 +31,22 @@ func (m *MCManager) AddBuyNFTStrategy(t request.BuyNFTService) string {
 func (m *MCManager) CancelBuyNFTStrategy(u string) {
 	if _, have := m.BuyNFTStrategies[u]; have {
 		m.BuyNFTStrategies[u].Closing <- struct{}{}
-		delete(m.BuyNFTStrategies, u)
 	}
 }
 
 func (m *MCManager) ExecBuyNFTStrategy(uuid string) {
-	strategy := m.BuyNFTStrategies[uuid]
+
 	nftDistribution, err := contract.NewNFTDistribution(common.HexToAddress(config.Cfg.Contract.NFTDistributionAddress), m.Wallet.BscClient)
 	if err != nil {
 		log.Errorf("construct nftDistributionContract err :%v", err)
+		return
+	}
+
+	leftNftAmount := big.NewInt(0)
+
+	toTokenID, err := nftDistribution.ToTokenId(nil)
+	if err != nil {
+		log.Error(err)
 		return
 	}
 
@@ -49,9 +56,11 @@ func (m *MCManager) ExecBuyNFTStrategy(uuid string) {
 		return
 	}
 
-	strategy.LeftAmount = int64(currentTokenID) - strategy.BuyAmount
+	leftNftAmount.Sub(big.NewInt(int64(toTokenID)), big.NewInt(int64(currentTokenID))).Add(leftNftAmount, big.NewInt(1))
 
-	buyFrequency := strategy.Time / strategy.BuyAmount
+	m.BuyNFTStrategies[uuid].LeftAmount = leftNftAmount.Int64() - m.BuyNFTStrategies[uuid].BuyAmount
+
+	buyFrequency := m.BuyNFTStrategies[uuid].Time / m.BuyNFTStrategies[uuid].BuyAmount
 
 	ticker := time.NewTicker(time.Second * time.Duration(buyFrequency+1))
 
@@ -61,10 +70,10 @@ loop:
 		case <-ticker.C:
 			m.BuyNFT(uuid)
 
-			ticker.Reset(time.Duration(util.Random(1, int(buyFrequency))) * time.Second)
-		case <-strategy.Closing:
+			ticker.Reset(time.Duration(util.Random(10, int(buyFrequency))) * time.Second)
+		case <-m.BuyNFTStrategies[uuid].Closing:
+			log.Info("buyNFTstrategy close...")
 			delete(m.BuyNFTStrategies, uuid)
-			log.Infof("buyNFTstrategy close...")
 			break loop
 		}
 	}
@@ -78,7 +87,6 @@ func (m *MCManager) BuyNFT(uuid string) {
 		return
 	}
 	leftNftAmount := big.NewInt(0)
-	strategy := m.BuyNFTStrategies[uuid]
 
 	toTokenID, err := nftDistribution.ToTokenId(nil)
 	if err != nil {
@@ -94,16 +102,14 @@ func (m *MCManager) BuyNFT(uuid string) {
 
 	if toTokenID-currentTokenID < 0 {
 		log.Info("The event is over and the sale is over.")
-		strategy.Closing <- struct{}{}
-		delete(m.BuyNFTStrategies, uuid)
+		m.BuyNFTStrategies[uuid].Closing <- struct{}{}
 		return
 	}
 
 	leftNftAmount.Sub(big.NewInt(int64(toTokenID)), big.NewInt(int64(currentTokenID))).Add(leftNftAmount, big.NewInt(1))
 
-	if leftNftAmount.Cmp(big.NewInt(strategy.LeftAmount)) == 0 || leftNftAmount.Cmp(big.NewInt(strategy.LeftAmount)) == -1 {
-		strategy.Closing <- struct{}{}
-		delete(m.BuyNFTStrategies, uuid)
+	if leftNftAmount.Cmp(big.NewInt(m.BuyNFTStrategies[uuid].LeftAmount)) == 0 || leftNftAmount.Cmp(big.NewInt(m.BuyNFTStrategies[uuid].LeftAmount)) == -1 {
+		m.BuyNFTStrategies[uuid].Closing <- struct{}{}
 		return
 	}
 
