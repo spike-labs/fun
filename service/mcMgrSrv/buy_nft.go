@@ -19,7 +19,7 @@ func (m *MCManager) AddBuyNFTStrategy(t request.BuyNFTService) string {
 	buyNFTStrategy := &request.BuyNFTStrategy{
 		Time:      t.Time,
 		BuyAmount: t.BuyAmount,
-		Closing:   make(chan struct{}, 0),
+		Closing:   make(chan struct{}, 1),
 	}
 
 	m.BuyNFTStrategies[u] = buyNFTStrategy
