@@ -210,11 +210,11 @@ func (m *MCManager) SwapToken(uuid string, path []common.Address, flag int) (int
 		return 0, err
 	}
 
-	if singleMaxAmount-10 <= 0 {
+	if singleMaxAmount-150 <= 0 {
 		fund = util.Random(1, singleMaxAmount)
 		log.Info("singleMaxAmount: ", singleMaxAmount)
 	} else {
-		fund = util.Random(singleMaxAmount-10, singleMaxAmount)
+		fund = util.Random(singleMaxAmount-150, singleMaxAmount)
 	}
 
 	switch flag {
