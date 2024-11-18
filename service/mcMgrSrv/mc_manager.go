@@ -173,7 +173,6 @@ loop:
 					log.Error(err)
 					break
 				}
-
 			}
 
 			ticker.Reset(time.Duration(util.Random(int(strategy.Frequency), int(strategy.Frequency+10))) * time.Second)

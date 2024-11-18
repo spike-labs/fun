@@ -5,13 +5,13 @@ go 1.18
 require (
 	github.com/BurntSushi/toml v1.2.0
 	github.com/Fueav/merkletree v0.0.2
-	github.com/cbergoon/merkletree v0.2.0
 	github.com/ethereum/go-ethereum v1.10.25
 	github.com/fsnotify/fsnotify v1.5.4
 	github.com/fvbock/endless v0.0.0-20170109170031-447134032cb6
 	github.com/gin-gonic/gin v1.8.1
 	github.com/go-redis/redis/v8 v8.11.5
 	github.com/go-resty/resty/v2 v2.7.0
+	github.com/google/martian v2.1.0+incompatible
 	github.com/google/uuid v1.3.0
 	github.com/ipfs/go-log v1.0.5
 	github.com/miguelmota/go-ethereum-hdwallet v0.1.1

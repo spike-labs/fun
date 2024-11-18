@@ -6,10 +6,10 @@ import (
 	"github.com/ethereum/go-ethereum/crypto"
 	"github.com/ethereum/go-ethereum/ethclient"
 	"math/big"
-	"spike-mc-ops/chain/contract"
+	"spike-mc-ops/service/merlin/contract"
 )
 
-const allowanceAmount = "1000000"
+const allowanceAmount = "10000000000000000000"
 
 func CheckAllowance(privateKey string, erc20ContractAddr string, panCakeRouterAddress string, chainId *big.Int, client *ethclient.Client) {
 	ecdsaPrivateKey, err := crypto.HexToECDSA(privateKey[2:])
@@ -23,7 +23,7 @@ func CheckAllowance(privateKey string, erc20ContractAddr string, panCakeRouterAd
 		return
 	}
 
-	erc20Contract, err := contract.NewErc20Contract(common.HexToAddress(erc20ContractAddr), client)
+	erc20Contract, err := contract.NewErc20(common.HexToAddress(erc20ContractAddr), client)
 	if err != nil {
 		log.Errorf("construct usdcContract err : %v", err)
 		return
@@ -34,7 +34,7 @@ func CheckAllowance(privateKey string, erc20ContractAddr string, panCakeRouterAd
 		return
 	}
 	if erc20Allowance.Cmp(big.NewInt(0)) > 0 {
-		log.Infof("allowance : %s", erc20Allowance.String())
+		log.Debugf("allowance : %s", erc20Allowance.String())
 		return
 	}
 

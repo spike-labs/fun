@@ -30,7 +30,7 @@ MaxIdleConns = 0
 MaxOpenConns = 0
 
 [PuppetWallet]
-Mnemonic = "ritual address enroll inform pioneer apple senior crash moment name dog elephant"
+Mnemonic = ""
 AccountNumber = 10
 GameTokenCost = 2000
 USDCCost = 200
