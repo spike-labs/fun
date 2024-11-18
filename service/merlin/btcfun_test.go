@@ -52,7 +52,7 @@ func Test(t *testing.T) {
 		return
 	}
 	chainId = id
-	privateKeyHex := "0xd0e9b7ce0dbdec2119b9dfda087284939e7db44ce93c3bf88c0b3c5825b8a575"
+	privateKeyHex := ""
 	address, err := util.GenerateAddress(privateKeyHex)
 	if err != nil {
 		log.Errorf("err: %v", err)
