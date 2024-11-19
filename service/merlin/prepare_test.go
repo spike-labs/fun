@@ -12,6 +12,7 @@ import (
 	"math/big"
 	"spike-mc-ops/service/merlin/contract"
 	"spike-mc-ops/util"
+	"sync"
 	"testing"
 	"time"
 )
@@ -22,7 +23,34 @@ const btcAmount = "0.0001"
 const merlAmount = "1"
 
 func TestCheckAllowance(t *testing.T) {
-
+	cli, err := ethclient.Dial(merlinTestNetRpcAddress)
+	if err != nil {
+		log.Errorf("failed to connect to rpc")
+		return
+	}
+	client = cli
+	id, err := client.ChainID(context.Background())
+	if err != nil {
+		log.Errorf("query chain id err: %v", err)
+		return
+	}
+	chainId = id
+	toAddressList := GetBtcFunAddressList(10)
+	throttle := make(chan struct{}, 5)
+	var wg sync.WaitGroup
+	for _, toAddressInfo := range toAddressList {
+		wg.Add(1)
+		throttle <- struct{}{}
+		go func(privateKeyHex string) {
+			defer func() {
+				wg.Done()
+				<-throttle
+			}()
+			util.CheckAllowance(privateKeyHex, testnetMerlContractAddress, btcFunContractAddress, chainId, client)
+			time.Sleep(3 * time.Second)
+		}(toAddressInfo.PrivateKey)
+	}
+	wg.Wait()
 }
 
 func TestDeliverMerl(t *testing.T) {

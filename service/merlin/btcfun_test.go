@@ -13,14 +13,15 @@ import (
 	"spike-mc-ops/service/merlin/service"
 	"spike-mc-ops/util"
 	"strconv"
+	"sync"
 	"testing"
+	"time"
 )
 
 var log = logger.Logger("merlin")
 
 func init() {
-	logger.SetAllLoggers(logger.LevelDebug)
-
+	logger.SetAllLoggers(logger.LevelDebug) //
 }
 
 const (
@@ -39,7 +40,7 @@ const (
 var client *ethclient.Client
 var chainId *big.Int
 
-func Test(t *testing.T) {
+func TestOffer(t *testing.T) {
 	cli, err := ethclient.Dial(merlinTestNetRpcAddress)
 	if err != nil {
 		log.Errorf("failed to connect to merlin-mainnet-rpc.merlinchain.io")
@@ -52,31 +53,59 @@ func Test(t *testing.T) {
 		return
 	}
 	chainId = id
-	privateKeyHex := ""
-	address, err := util.GenerateAddress(privateKeyHex)
+	toAddressList := GetBtcFunAddressList(10)
+
+	throttle := make(chan struct{}, 5)
+	var wg sync.WaitGroup
+	for _, toAddressInfo := range toAddressList {
+		wg.Add(1)
+		throttle <- struct{}{}
+		go func(privateKeyHex string, address string) {
+			defer func() {
+				wg.Done()
+				<-throttle
+			}()
+			if CheckOfferOf(address) {
+				log.Infof("address: %s offered", address)
+				return
+			}
+			nonce, err := service.QueryNonce(address, nonceUrl)
+			if err != nil {
+				log.Errorf("err: %v", err)
+				return
+			}
+			log.Debugf("nonceRes: %s", nonce.Data.Nonce)
+			accessToken, err := service.Login(privateKeyHex, address, nonce.Data.Nonce, loginUrl)
+			if err != nil {
+				log.Errorf("err: %v", err)
+				return
+			}
+			log.Debugf("access token: %s", accessToken)
+			signResp, err := service.Sign(accessToken, address, singleAmount, signUrl, partyTokenContractAddress)
+			if err != nil {
+				log.Errorf("err: %v", err)
+				return
+			}
+			Offer(privateKeyHex, signResp)
+			time.Sleep(3 * time.Second)
+		}(toAddressInfo.PrivateKey, toAddressInfo.Address)
+	}
+	wg.Wait()
+}
+
+func CheckOfferOf(address string) (flag bool) {
+	btcFun, err := contract.NewBtcfun(common.HexToAddress(btcFunContractAddress), client)
 	if err != nil {
-		log.Errorf("err: %v", err)
+		log.Errorf("failed to connect to merlin-mainnet-rpc.merlinchain.io")
 		return
 	}
-	util.CheckAllowance(privateKeyHex, testnetMerlContractAddress, btcFunContractAddress, chainId, client)
-	nonce, err := service.QueryNonce(address, nonceUrl)
+	amount, err := btcFun.OfferedOf(nil, common.HexToAddress(partyTokenContractAddress), common.HexToAddress(address))
 	if err != nil {
 		log.Errorf("err: %v", err)
-		return
+		return true
 	}
-	log.Debugf("nonceRes: %s", nonce.Data.Nonce)
-	accessToken, err := service.Login(privateKeyHex, address, nonce.Data.Nonce, loginUrl)
-	if err != nil {
-		log.Errorf("err: %v", err)
-		return
-	}
-	log.Infof("access token: %s", accessToken)
-	signResp, err := service.Sign(accessToken, address, singleAmount, signUrl, partyTokenContractAddress)
-	if err != nil {
-		log.Errorf("err: %v", err)
-		return
-	}
-	Offer(privateKeyHex, signResp)
+	log.Debugf("amount: %s", amount.String())
+	return amount.Int64() > 0
 }
 
 func Offer(privateKeyHex string, signResp service.SignResp) {

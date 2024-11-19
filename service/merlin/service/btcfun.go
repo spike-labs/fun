@@ -66,7 +66,7 @@ func Sign(accessToken string, address string, amount int64, signUrl string, part
 		SetHeader("Authorization", "Bearer "+accessToken).
 		SetBody(SignReq{
 			Address: address,
-			OfferOf: util.ToWei(strconv.FormatInt(4, 10), 18).String(),
+			OfferOf: util.ToWei(strconv.FormatInt(0, 10), 18).String(), //只有一次募资 OfferOf为0
 			Amount:  util.ToWei(strconv.FormatInt(amount, 10), 18).String(),
 			Token:   partyTokenContractAddress,
 		}).Post(signUrl)
