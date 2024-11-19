@@ -41,6 +41,8 @@ var client *ethclient.Client
 var chainId *big.Int
 
 func TestOffer(t *testing.T) {
+	walletStartIndex := 0
+	walletEndIndex := 10
 	cli, err := ethclient.Dial(merlinTestNetRpcAddress)
 	if err != nil {
 		log.Errorf("failed to connect to merlin-mainnet-rpc.merlinchain.io")
@@ -53,7 +55,7 @@ func TestOffer(t *testing.T) {
 		return
 	}
 	chainId = id
-	toAddressList := GetBtcFunAddressList(10)
+	toAddressList := GetBtcFunAddressList(walletStartIndex, walletEndIndex)
 
 	throttle := make(chan struct{}, 5)
 	var wg sync.WaitGroup

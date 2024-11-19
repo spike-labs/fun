@@ -18,11 +18,20 @@ import (
 )
 
 const BtcFunWalletMnemonic = ""
-const mainWalletPrivateKey = ""
+
+var MainWalletPrivateKeyList = []string{
+	"",
+	"",
+	"",
+}
+
 const btcAmount = "0.0001"
 const merlAmount = "1"
 
 func TestCheckAllowance(t *testing.T) {
+	walletStartIndex := 0
+	walletEndIndex := 10
+
 	cli, err := ethclient.Dial(merlinTestNetRpcAddress)
 	if err != nil {
 		log.Errorf("failed to connect to rpc")
@@ -35,7 +44,7 @@ func TestCheckAllowance(t *testing.T) {
 		return
 	}
 	chainId = id
-	toAddressList := GetBtcFunAddressList(10)
+	toAddressList := GetBtcFunAddressList(walletStartIndex, walletEndIndex)
 	throttle := make(chan struct{}, 5)
 	var wg sync.WaitGroup
 	for _, toAddressInfo := range toAddressList {
@@ -54,6 +63,10 @@ func TestCheckAllowance(t *testing.T) {
 }
 
 func TestDeliverMerl(t *testing.T) {
+	mainWalletPrivateIndex := 0
+	walletStartIndex := 0
+	walletEndIndex := 10
+
 	cli, err := ethclient.Dial(merlinTestNetRpcAddress)
 	if err != nil {
 		log.Errorf("failed to connect to rpc")
@@ -76,9 +89,9 @@ func TestDeliverMerl(t *testing.T) {
 		log.Error("NewErc20 err: ", err)
 		return
 	}
-	toAddressList := GetBtcFunAddressList(10)
+	toAddressList := GetBtcFunAddressList(walletStartIndex, walletEndIndex)
 	for _, toAddressInfo := range toAddressList {
-		priKey, err := crypto.HexToECDSA(mainWalletPrivateKey[2:])
+		priKey, err := crypto.HexToECDSA(MainWalletPrivateKeyList[mainWalletPrivateIndex][2:])
 		if err != nil {
 			return
 		}
@@ -111,6 +124,9 @@ func TestDeliverMerl(t *testing.T) {
 }
 
 func TestDeliverBtc(t *testing.T) {
+	mainWalletPrivateIndex := 0
+	walletStartIndex := 0
+	walletEndIndex := 10
 	cli, err := ethclient.Dial(merlinTestNetRpcAddress)
 	if err != nil {
 		log.Errorf("failed to connect to rpc")
@@ -133,16 +149,16 @@ func TestDeliverBtc(t *testing.T) {
 		log.Error("query block number err: ", err)
 		return
 	}
-	mainAddress, err := util.GenerateAddress(mainWalletPrivateKey)
+	mainAddress, err := util.GenerateAddress(MainWalletPrivateKeyList[mainWalletPrivateIndex])
 
-	toAddressList := GetBtcFunAddressList(10)
+	toAddressList := GetBtcFunAddressList(walletStartIndex, walletEndIndex)
 	for _, toAddressInfo := range toAddressList {
 		nonce, err := client.PendingNonceAt(context.Background(), common.HexToAddress(mainAddress))
 		if err != nil {
 			log.Error("query nonce err: ", err)
 			return
 		}
-		priKey, err := crypto.HexToECDSA(mainWalletPrivateKey[2:])
+		priKey, err := crypto.HexToECDSA(MainWalletPrivateKeyList[mainWalletPrivateIndex][2:])
 		if err != nil {
 			return
 		}
@@ -196,9 +212,9 @@ func TestDeliverBtc(t *testing.T) {
 	}
 }
 
-func GetBtcFunAddressList(num int) []AddressInfo {
+func GetBtcFunAddressList(start int, end int) []AddressInfo {
 	addressList := make([]AddressInfo, 0)
-	for i := 0; i < num; i++ {
+	for i := start; i < end; i++ {
 		priKeyString, err := util.DerivePrivateKeyWithNumber(BtcFunWalletMnemonic, i)
 		if err != nil {
 			return nil
