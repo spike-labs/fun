@@ -18,7 +18,7 @@ import (
 )
 
 const BtcFunWalletMnemonic = ""
-const mainWalletPrivateKey = "0x"
+const mainWalletPrivateKey = ""
 const btcAmount = "0.0001"
 const merlAmount = "1"
 
@@ -199,7 +199,7 @@ func TestDeliverBtc(t *testing.T) {
 func GetBtcFunAddressList(num int) []AddressInfo {
 	addressList := make([]AddressInfo, 0)
 	for i := 0; i < num; i++ {
-		priKeyString, err := util.DerivePrivateKeyWithNumber(walletMnemonic, i)
+		priKeyString, err := util.DerivePrivateKeyWithNumber(BtcFunWalletMnemonic, i)
 		if err != nil {
 			return nil
 		}
