@@ -31,7 +31,7 @@ var (
 	swapContractAddress       = "0x2426191006F378BF33445f87938d355096eE2e8C" //池子合约
 	merlinMainNetRpcAddress   = "https://merlin-mainnet-rpc.merlinchain.io"
 	SlippageTolerance         = 0.05
-	SwapMerlAmount            = "100"
+	SwapMerlAmount            = "5"
 )
 
 var lock sync.Mutex
@@ -76,11 +76,15 @@ func InitWallet(walletStartIndex int, walletEndIndex int) ([]*bind.TransactOpts,
 	}
 	log.Infof("id: %d", id.Int64())
 	puppetWallets := make([]*bind.TransactOpts, 0)
-
+	throttle := make(chan struct{}, 5)
 	for i := walletStartIndex; i < walletEndIndex; i++ {
 		wg.Add(1)
+		throttle <- struct{}{}
 		go func(index int) {
-			defer wg.Done()
+			defer func() {
+				wg.Done()
+				<-throttle
+			}()
 			priKeyString, err := util.DerivePrivateKeyWithNumber(walletMnemonic, index)
 			if err != nil {
 				return
