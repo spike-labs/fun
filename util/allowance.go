@@ -1,10 +1,12 @@
 package util
 
 import (
+	"context"
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/crypto"
 	"github.com/ethereum/go-ethereum/ethclient"
+	"math"
 	"math/big"
 	"spike-mc-ops/service/merlin/contract"
 )
@@ -43,6 +45,13 @@ func CheckAllowance(privateKey string, erc20ContractAddr string, panCakeRouterAd
 		log.Errorf("construct txOps err : %v", err)
 		return
 	}
+	gasPrice, err := client.SuggestGasPrice(context.Background())
+	if err != nil {
+		log.Errorf("query gas price err: %v", err)
+		return
+	}
+	txOps.GasLimit = 80000
+	txOps.GasPrice = big.NewInt(int64(math.Ceil(float64(gasPrice.Int64()) * 1.3)))
 	tx, err := erc20Contract.Approve(txOps, common.HexToAddress(panCakeRouterAddress), ToWei(allowanceAmount, 18))
 	if err != nil {
 		log.Errorf("usdcContract Approve  err : %v", err)
