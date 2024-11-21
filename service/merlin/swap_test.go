@@ -128,6 +128,7 @@ func InitWallet(walletStartIndex int, walletEndIndex int) ([]TxOps, error) {
 			lock.Unlock()
 
 			util.CheckAllowance(priKeyString, merlContractAddress, merlinSwapContractAddress, id, merlinClient)
+			time.Sleep(5 * time.Second)
 			//util.CheckAllowance(priKeyString, wbtcTokenContractAddress, merlinSwapContractAddress, id, merlinClient)
 		}(i)
 	}
