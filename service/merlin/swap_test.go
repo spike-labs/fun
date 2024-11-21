@@ -7,7 +7,6 @@ import (
 	"fmt"
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	"github.com/ethereum/go-ethereum/common"
-	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/ethereum/go-ethereum/crypto"
 	"github.com/ethereum/go-ethereum/ethclient"
 	"github.com/go-resty/resty/v2"
@@ -34,6 +33,11 @@ var (
 	SwapMerlAmount            = "5"
 )
 
+type TxOps struct {
+	Ops   *bind.TransactOpts
+	Index int64
+}
+
 var lock sync.Mutex
 var merlinClient *ethclient.Client
 
@@ -55,19 +59,38 @@ func TestSwap(t *testing.T) {
 	for _, ops := range txOps {
 		wg.Add(1)
 		throttle <- struct{}{}
-		go func(opts *bind.TransactOpts) {
+		go func(opts *bind.TransactOpts, index int64) {
 			defer func() {
 				wg.Done()
 				<-throttle
 			}()
-			BuyToken(opts)
-		}(ops)
+			wbtcContract, err := contract.NewErc20(common.HexToAddress(wbtcTokenContractAddress), merlinClient)
+			if err != nil {
+				log.Errorf("err: %v", err)
+				return
+			}
+			wbtcWalletBalance, err := wbtcContract.BalanceOf(nil, opts.From)
+			if err != nil {
+				log.Errorf("err: %v", err)
+				return
+			}
+			if wbtcWalletBalance.Int64() > 0 {
+				log.Infof("address: %s,  index: %d, wbtcWalletBalance: %s", opts.From, index, wbtcWalletBalance.String())
+				return
+			}
+			txHash, err := BuyToken(opts)
+			if err != nil {
+				log.Errorf("exec %d, err: %v", index, err)
+				return
+			}
+			log.Infof("exec %d , tx hash: %s success", index, txHash)
+		}(ops.Ops, ops.Index)
 		time.Sleep(3 * time.Second)
 	}
 	wg.Wait()
 }
 
-func InitWallet(walletStartIndex int, walletEndIndex int) ([]*bind.TransactOpts, error) {
+func InitWallet(walletStartIndex int, walletEndIndex int) ([]TxOps, error) {
 	var wg sync.WaitGroup
 	id, err := merlinClient.ChainID(context.Background())
 	if err != nil {
@@ -75,7 +98,7 @@ func InitWallet(walletStartIndex int, walletEndIndex int) ([]*bind.TransactOpts,
 		return nil, err
 	}
 	log.Infof("id: %d", id.Int64())
-	puppetWallets := make([]*bind.TransactOpts, 0)
+	txOps := make([]TxOps, 0)
 	throttle := make(chan struct{}, 5)
 	for i := walletStartIndex; i < walletEndIndex; i++ {
 		wg.Add(1)
@@ -101,7 +124,7 @@ func InitWallet(walletStartIndex int, walletEndIndex int) ([]*bind.TransactOpts,
 				return
 			}
 			lock.Lock()
-			puppetWallets = append(puppetWallets, opts)
+			txOps = append(txOps, TxOps{opts, int64(index)})
 			lock.Unlock()
 
 			util.CheckAllowance(priKeyString, merlContractAddress, merlinSwapContractAddress, id, merlinClient)
@@ -109,7 +132,7 @@ func InitWallet(walletStartIndex int, walletEndIndex int) ([]*bind.TransactOpts,
 		}(i)
 	}
 	wg.Wait()
-	return puppetWallets, nil
+	return txOps, nil
 }
 
 func QueryTokenHold(poolAddress string) (tokenHold map[string]string, err error) {
@@ -137,15 +160,15 @@ func QueryTokenHold(poolAddress string) (tokenHold map[string]string, err error)
 	return tokenHoldInfoMap, nil
 }
 
-func BuyToken(opts *bind.TransactOpts) {
+func BuyToken(opts *bind.TransactOpts) (txHash string, err error) {
 	tokenHoldMap, err := QueryTokenHold(swapContractAddress)
 	if err != nil {
 		log.Errorf("query token hold err: %v", err)
-		return
+		return "", err
 	}
 	router, err := contract.NewRouter(common.HexToAddress(merlinSwapContractAddress), merlinClient)
 	if err != nil {
-		return
+		return "", err
 	}
 	merlTotalAmount := tokenHoldMap[strings.ToLower(merlContractAddress)]
 	wbtcTotalAmount := tokenHoldMap[strings.ToLower(wbtcTokenContractAddress)]
@@ -153,16 +176,17 @@ func BuyToken(opts *bind.TransactOpts) {
 	merlTotalAmountFloat, _, err := new(big.Float).Parse(merlTotalAmount, 10)
 	if err != nil {
 		log.Errorf("err: %v", err)
-		return
+		return "", err
 	}
 	wbtcTotalAmountFloat, _, err := new(big.Float).Parse(wbtcTotalAmount, 10)
 	if err != nil {
 		log.Errorf("err: %v", err)
-		return
+		return "", err
 	}
 	swapMerlAmount, _, err := new(big.Float).Parse(SwapMerlAmount, 10)
 	if err != nil {
 		log.Errorf("err: %v", err)
+		return "", err
 	}
 
 	effectiveSwapAmount := new(big.Float).Mul(swapMerlAmount, new(big.Float).Sub(big.NewFloat(1), feePercent))
@@ -175,11 +199,12 @@ func BuyToken(opts *bind.TransactOpts) {
 
 	outputB := new(big.Float).Sub(wbtcTotalAmountFloat, newB)
 	finalOutputB := new(big.Float).Mul(outputB, new(big.Float).Sub(big.NewFloat(1), big.NewFloat(SlippageTolerance)))
-	log.Infof("merlTotalAmountFloat, %s, wbtcTotalAmountFloat: %s", merlTotalAmountFloat.String(), wbtcTotalAmountFloat.String())
-	log.Infof("effectiveSwapAmount, %s, newA: %s, k: %s, newB: %s", effectiveSwapAmount.String(), newA.String(), k.String(), newB.String())
+	//log.Infof("merlTotalAmountFloat, %s, wbtcTotalAmountFloat: %s", merlTotalAmountFloat.String(), wbtcTotalAmountFloat.String())
+	//log.Infof("effectiveSwapAmount, %s, newA: %s, k: %s, newB: %s", effectiveSwapAmount.String(), newA.String(), k.String(), newB.String())
 	router, err = contract.NewRouter(common.HexToAddress(merlinSwapContractAddress), merlinClient)
 	if err != nil {
-		return
+		log.Errorf("err: %v", err)
+		return "", err
 	}
 	var fund int
 	rand.Seed(time.Now().Unix())
@@ -199,8 +224,8 @@ func BuyToken(opts *bind.TransactOpts) {
 		common.Hex2Bytes(fee10000),
 		common.Hex2Bytes(wbtcTokenContractAddress[2:]),
 	}, nil)
-	log.Infof("addr: %s", opts.From.String())
-	log.Infof("path: %s", hexutil.Encode(pathBytes))
+	//log.Infof("addr: %s", opts.From.String())
+	//log.Infof("path: %s", hexutil.Encode(pathBytes))
 
 	tx, err := router.SwapAmount(opts, contract.SwapSwapAmountParams{
 		pathBytes,
@@ -212,9 +237,9 @@ func BuyToken(opts *bind.TransactOpts) {
 
 	if err != nil {
 		log.Error(err)
-		return
+		return "", err
 	}
-	log.Infof("tx: %s", tx.Hash().String())
+	return tx.Hash().String(), nil
 }
 
 type TokenHoldInfo struct {
