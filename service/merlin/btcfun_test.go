@@ -2,6 +2,7 @@ package merlin
 
 import (
 	"context"
+	"fmt"
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/crypto"
@@ -9,6 +10,7 @@ import (
 	logger "github.com/ipfs/go-log"
 	"math"
 	"math/big"
+	"os"
 	"spike-mc-ops/service/merlin/contract"
 	"spike-mc-ops/service/merlin/service"
 	"spike-mc-ops/util"
@@ -57,12 +59,29 @@ func TestOffer(t *testing.T) {
 	chainId = id
 	toAddressList := GetBtcFunAddressList(walletStartIndex, walletEndIndex)
 
+	f, err := os.OpenFile("offer_log.csv", os.O_APPEND|os.O_WRONLY, os.ModeAppend)
+	if err != nil {
+		log.Infof("no such file or directory and create new file")
+		f, err = os.Create("offer_log.csv")
+		if err != nil {
+			log.Errorf("err: %v", err)
+			return
+		}
+		_, err = fmt.Fprintln(f, "index,address,tx_hash")
+	}
+
+	defer f.Close()
+
+	if err != nil {
+		log.Errorf("err: %v", err)
+		return
+	}
 	throttle := make(chan struct{}, 5)
 	var wg sync.WaitGroup
 	for _, toAddressInfo := range toAddressList {
 		wg.Add(1)
 		throttle <- struct{}{}
-		go func(privateKeyHex string, address string) {
+		go func(privateKeyHex string, address string, index int) {
 			defer func() {
 				wg.Done()
 				<-throttle
@@ -88,9 +107,14 @@ func TestOffer(t *testing.T) {
 				log.Errorf("err: %v", err)
 				return
 			}
-			Offer(privateKeyHex, signResp)
+			txHash, err := Offer(privateKeyHex, signResp)
+			if err != nil {
+				log.Errorf("err: %v", err)
+				return
+			}
+			fmt.Fprintf(f, "%d,%s,%s\n", index, address, txHash)
 			time.Sleep(3 * time.Second)
-		}(toAddressInfo.PrivateKey, toAddressInfo.Address)
+		}(toAddressInfo.PrivateKey, toAddressInfo.Address, toAddressInfo.Index)
 	}
 	wg.Wait()
 }
@@ -110,7 +134,7 @@ func CheckOfferOf(address string) (flag bool) {
 	return amount.Int64() > 0
 }
 
-func Offer(privateKeyHex string, signResp service.SignResp) {
+func Offer(privateKeyHex string, signResp service.SignResp) (txHash string, err error) {
 	btcFun, err := contract.NewBtcfun(common.HexToAddress(btcFunContractAddress), client)
 	if err != nil {
 		log.Errorf("failed to connect to merlin-mainnet-rpc.merlinchain.io")
@@ -150,4 +174,5 @@ func Offer(privateKeyHex string, signResp service.SignResp) {
 		return
 	}
 	log.Debugf("tx: %s", tx.Hash().Hex())
+	return tx.Hash().Hex(), nil
 }

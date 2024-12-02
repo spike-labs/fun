@@ -62,6 +62,72 @@ func TestCheckAllowance(t *testing.T) {
 	wg.Wait()
 }
 
+// wbtc归集
+func TestERC20Aggregation(t *testing.T) {
+	mainWalletPrivateIndex := 0 //归集到第几个主钱包
+	walletStartIndex := 0
+	walletEndIndex := 10
+
+	cli, err := ethclient.Dial(merlinMainNetRpcAddress)
+	if err != nil {
+		log.Errorf("failed to connect to rpc")
+		return
+	}
+	client = cli
+	id, err := client.ChainID(context.Background())
+	if err != nil {
+		log.Errorf("query chain id err: %v", err)
+		return
+	}
+	chainId = id
+	gasPrice, err := client.SuggestGasPrice(context.Background())
+	if err != nil {
+		log.Errorf("query gas price err: %v", err)
+		return
+	}
+	wbtcTokenContract, err := contract.NewErc20(common.HexToAddress(wbtcTokenContractAddress), client)
+	if err != nil {
+		log.Error("NewErc20 err: ", err)
+		return
+	}
+	mainAddress, err := util.GenerateAddress(MainWalletPrivateKeyList[mainWalletPrivateIndex])
+	if err != nil {
+		log.Error("GenerateAddress err: ", err)
+		return
+	}
+	fromAddressList := GetBtcFunAddressList(walletStartIndex, walletEndIndex)
+	for _, fromAddressInfo := range fromAddressList {
+		wbtcBalance, err := wbtcTokenContract.BalanceOf(nil, common.HexToAddress(fromAddressInfo.Address))
+		if err != nil {
+			log.Error("Query balance err: ", err)
+			return
+		}
+		log.Debugf("wbtc balance %s", wbtcBalance.String())
+		if wbtcBalance.Int64() == 0 {
+			log.Debugf("wbtc balance is zero, address: %s, balance: %d", fromAddressInfo, wbtcBalance.Int64())
+			continue
+		}
+		priKey, err := crypto.HexToECDSA(fromAddressInfo.PrivateKey[2:])
+		if err != nil {
+			return
+		}
+
+		opts, err := bind.NewKeyedTransactorWithChainID(priKey, id)
+		if err != nil {
+			return
+		}
+		opts.GasLimit = 200000
+		opts.GasPrice = big.NewInt(int64(math.Ceil(float64(gasPrice.Int64()) * gasPriceMultiples)))
+		tx, err := wbtcTokenContract.Transfer(opts, common.HexToAddress(mainAddress), wbtcBalance)
+		if err != nil {
+			log.Error("transfer wbtc err: ", err)
+			return
+		}
+		log.Infof("send transaction success. tx: %s", tx.Hash().Hex())
+		time.Sleep(5 * time.Second)
+	}
+}
+
 func TestDeliverMerl(t *testing.T) {
 	mainWalletPrivateIndex := 0
 	walletStartIndex := 0
@@ -220,10 +286,11 @@ func GetBtcFunAddressList(start int, end int) []AddressInfo {
 			return nil
 		}
 		address, err := util.GenerateAddress(priKeyString)
-		log.Debugf("address: %s, privateKey: %s", address, priKeyString)
+		//log.Debugf("address: %s, privateKey: %s", address, priKeyString)
 		addressList = append(addressList, AddressInfo{
 			Address:    address,
 			PrivateKey: priKeyString,
+			Index:      i,
 		})
 	}
 	return addressList
@@ -232,4 +299,5 @@ func GetBtcFunAddressList(start int, end int) []AddressInfo {
 type AddressInfo struct {
 	Address    string `json:"address"`
 	PrivateKey string `json:"privateKey"`
+	Index      int    `json:"index"`
 }

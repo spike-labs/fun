@@ -53,7 +53,7 @@ func QueryNonce(address string, nonceUrl string) (res NonceResp, err error) {
 	var nonceRes NonceResp
 	err = json.Unmarshal(resp.Body(), &nonceRes)
 	if err != nil {
-		log.Errorf("err: %v", err)
+		log.Errorf("err: %v, %s", err, string(resp.Body()))
 		return
 	}
 	return nonceRes, nil
