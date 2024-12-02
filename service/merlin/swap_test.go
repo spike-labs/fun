@@ -78,7 +78,6 @@ func TestSwapMerl2Token(t *testing.T) {
 		log.Errorf("failed to init wallet")
 		return
 	}
-	return
 	throttle := make(chan struct{}, 5)
 	var wg sync.WaitGroup
 	for _, ops := range txOps {
