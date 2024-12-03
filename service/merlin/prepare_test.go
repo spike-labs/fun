@@ -103,7 +103,7 @@ func TestERC20Aggregation(t *testing.T) {
 			return
 		}
 		log.Debugf("wbtc balance %s", wbtcBalance.String())
-		if wbtcBalance.Int64() == 0 {
+		if wbtcBalance.Cmp(big.NewInt(0)) == 0 {
 			log.Debugf("wbtc balance is zero, address: %s, balance: %d", fromAddressInfo, wbtcBalance.Int64())
 			continue
 		}
@@ -173,7 +173,7 @@ func TestDeliverMerl(t *testing.T) {
 			return
 		}
 		log.Debugf("merl balance %s", merlBalance.String())
-		if merlBalance.Int64() > 0 {
+		if merlBalance.Cmp(big.NewInt(0)) > 0 {
 			log.Infof("merl balance enough, address: %s, balance: %d", toAddress.String(), merlBalance.Int64())
 			continue
 		}
@@ -240,7 +240,7 @@ func TestDeliverBtc(t *testing.T) {
 			log.Error("query balance err: ", err)
 			return
 		}
-		if btcBalance.Int64() > 0 {
+		if btcBalance.Cmp(big.NewInt(0)) > 0 {
 			log.Infof("btc balance enough, %d", btcBalance.Int64())
 			continue
 		}

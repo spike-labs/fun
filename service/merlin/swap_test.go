@@ -98,7 +98,7 @@ func TestSwapMerl2Token(t *testing.T) {
 				log.Errorf("err: %v", err)
 				return
 			}
-			if wbtcWalletBalance.Int64() > 0 {
+			if wbtcWalletBalance.Cmp(big.NewInt(0)) > 0 {
 				log.Debugf("address: %s,  index: %d, wbtcWalletBalance: %s", opts.From, index, wbtcWalletBalance.String())
 				return
 			}
@@ -174,7 +174,7 @@ func BuyToken(opts *bind.TransactOpts) (txHash string, err error) {
 	}
 	tokenX := common.HexToAddress(merlContractAddress)
 	tokenY := common.HexToAddress(wbtcTokenContractAddress)
-	fee := big.NewInt(10000)                 // 假设手续费等级 0.3%
+	fee := big.NewInt(10000)                 // 假设手续费等级 1%
 	amount := util.ToWei(SwapMerlAmount, 18) // 输入 merl token数量
 	lowPt := big.NewInt(-887272)
 	amountY, _, err := quoter.SwapX2YStatic(callOpts, tokenX, tokenY, fee, amount, lowPt)

@@ -131,7 +131,7 @@ func CheckOfferOf(address string) (flag bool) {
 		return true
 	}
 	log.Debugf("amount: %s", amount.String())
-	return amount.Int64() > 0
+	return amount.Cmp(big.NewInt(0)) > 0
 }
 
 func Offer(privateKeyHex string, signResp service.SignResp) (txHash string, err error) {
