@@ -20,6 +20,9 @@ func EthSign(message string, privateKeyHex string) (sig string, err error) {
 		log.Errorf("Failed to sign message: %v", err)
 		return "", err
 	}
+	if signature[64] == 0 || signature[64] == 1 {
+		signature[64] += 27
+	}
 	return fmt.Sprintf("0x%x", signature), nil
 }
 

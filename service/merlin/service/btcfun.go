@@ -2,26 +2,33 @@ package service
 
 import (
 	"encoding/json"
+	"fmt"
 	"github.com/go-resty/resty/v2"
 	"github.com/google/martian/log"
+	"golang.org/x/xerrors"
 	"spike-mc-ops/util"
 	"strconv"
+	"time"
 )
 
-func Login(privateKey string, address string, nonce string, loginUrl string) (token string, err error) {
-	msg := "Sign in BTC.FUN\n\nWallet address:\n" + address + "\n\nExpiration time:\n2025-01-27T17:19:13+08:00\nNonce:\n" + nonce + "\n"
+func Login(privateKey string, address string, loginUrl string) (token string, err error) {
+	nonce := time.Now().Unix() //1733208601
+	fmt.Println("nonce: ", nonce)
+	//Welcome to https://test.btc.fun, your address is 0x447d23C91E7827e6Bc8975D9999C4da2e28027de and nonce is 1733208601
+	msg := "Welcome to https://test.btc.fun, your address is " + address + " and nonce is " + strconv.Itoa(int(nonce))
 	signature, err := EthSign(msg, privateKey)
 	if err != nil {
 		log.Errorf("err: %v", err)
 		return "", err
 	}
-	log.Debugf("signature: %s", signature)
 	client := resty.New()
 	resp, err := client.R().
 		SetHeader("Accept", "application/json").
 		SetBody(LoginReq{
-			Type:      "evm",
-			Message:   msg,
+			Address:   address,
+			Chain:     "EVM",
+			Domain:    "https://test.btc.fun",
+			Nonce:     nonce,
 			Signature: signature,
 		}).
 		Post(loginUrl)
@@ -29,44 +36,30 @@ func Login(privateKey string, address string, nonce string, loginUrl string) (to
 		log.Errorf("err: %v", err)
 		return
 	}
+
 	var loginRes LoginResp
 	err = json.Unmarshal(resp.Body(), &loginRes)
 	if err != nil {
 		log.Errorf("err: %v, %s", err, string(resp.Body()))
 		return
 	}
-	log.Debugf("access token: %v", loginRes.Data.AccessToken)
-	return loginRes.Data.AccessToken, nil
-}
-
-func QueryNonce(address string, nonceUrl string) (res NonceResp, err error) {
-	log.Debugf("QueryNonce, address: %s", address)
-	client := resty.New()
-	resp, err := client.R().
-		SetHeader("Accept", "application/json").
-		Get(nonceUrl + address)
-
-	if err != nil {
-		log.Errorf("err: %v", err)
-		return
+	if loginRes.Code != "OK" {
+		fmt.Println("body: ", resp.Body())
+		return "", xerrors.New("code is not OK")
 	}
-	var nonceRes NonceResp
-	err = json.Unmarshal(resp.Body(), &nonceRes)
-	if err != nil {
-		log.Errorf("err: %v, %s", err, string(resp.Body()))
-		return
-	}
-	return nonceRes, nil
+	log.Debugf("access token: %v", loginRes.Data.Token)
+	return loginRes.Data.Token, nil
 }
 
 func Sign(accessToken string, address string, amount int64, signUrl string, partyTokenContractAddress string) (res SignResp, err error) {
 	client := resty.New()
 	resp, err := client.R().
 		SetHeader("Accept", "application/json").
-		SetHeader("Authorization", "Bearer "+accessToken).
+		SetHeader("Btcfun-Login-Address", address).
+		SetHeader("Btcfun-Login-Token", accessToken).
 		SetBody(SignReq{
 			Address: address,
-			OfferOf: util.ToWei(strconv.FormatInt(0, 10), 18).String(), //只有一次募资 OfferOf为0
+			OfferOf: util.ToWei(strconv.FormatInt(2, 10), 18).String(), //只有一次募资 OfferOf为0
 			Amount:  util.ToWei(strconv.FormatInt(amount, 10), 18).String(),
 			Token:   partyTokenContractAddress,
 		}).Post(signUrl)
@@ -81,6 +74,9 @@ func Sign(accessToken string, address string, amount int64, signUrl string, part
 		log.Errorf("err: %v, data: %s", err, string(resp.Body()))
 		return
 	}
+	if signResp.Code != "OK" {
+		return signResp, xerrors.New("code is not OK")
+	}
 	log.Debugf("signResp: %v", signResp)
 	return signResp, nil
 }
@@ -93,7 +89,7 @@ type SignReq struct {
 }
 
 type SignResp struct {
-	Code int      `json:"code"`
+	Code string   `json:"code"`
 	Msg  string   `json:"msg"`
 	Data SignData `json:"data"`
 }
@@ -113,21 +109,23 @@ type SignData struct {
 	S         string `json:"s"`
 	V         int64  `json:"v"`
 	Signatory string `json:"signatory"`
-	TimeStamp int64  `json:"timeStamp"`
+	Expiry    int64  `json:"expiry"`
 }
 
 type LoginReq struct {
-	Message   string `json:"message"`
+	Address   string `json:"address"`
+	Chain     string `json:"chain"`
+	Domain    string `json:"domain"`
+	Nonce     int64  `json:"nonce"`
 	Signature string `json:"signature"`
-	Type      string `json:"type"`
 }
 
 type LoginResp struct {
-	Code int       `json:"code"`
+	Code string    `json:"code"`
 	Msg  string    `json:"msg"`
 	Data LoginData `json:"data"`
 }
 
 type LoginData struct {
-	AccessToken string `json:"access_token"`
+	Token string `json:"token"`
 }

@@ -26,7 +26,6 @@ func ParseBalance(balance *big.Int) string {
 }
 
 func TransferBNB(amount float64, publicKey, privateKey, toAddress string) (txHash string, err error) {
-
 	ec, err := ethclient.Dial(config.Cfg.Chain.RpcNodeAddress)
 	if err != nil {
 		log.Errorf("dial client err : %v", err)

@@ -27,11 +27,10 @@ func init() {
 }
 
 const (
-	loginUrl                   = "https://api-testnet.btc.fun/user/login"
-	signUrl                    = "https://api-testnet.btc.fun/token/sign"
-	nonceUrl                   = "https://api-testnet.btc.fun/user/nonce?publicKey="
-	partyTokenContractAddress  = "0xF4055a9DaE32eB96Fd55dc49d84f30727757fe3A"
-	btcFunContractAddress      = "0xD63DE91412Be4817b4fDB39993cDE784b9497bcD"
+	loginUrl                   = "https://api-testnet-new.btc.fun/api/v1/login"
+	signUrl                    = "https://api-testnet-new.btc.fun/api/v1/token/sign"
+	partyTokenContractAddress  = "0xFF19B0491f4104BDFcEAD194Ba9ee7ff46744341"
+	btcFunContractAddress      = "0x0bC495E0e8b4817b60348D82390603f74E1871B4"
 	testnetMerlContractAddress = "0x5c9ad13be752a5e21e7ed393bb7d407144c6d550"
 	merlinTestNetRpcAddress    = "https://testnet-rpc.merlinchain.io"
 	singleAmount               = 2      //每次募资多少个merl
@@ -44,7 +43,7 @@ var chainId *big.Int
 
 func TestOffer(t *testing.T) {
 	walletStartIndex := 0
-	walletEndIndex := 10
+	walletEndIndex := 1
 	cli, err := ethclient.Dial(merlinTestNetRpcAddress)
 	if err != nil {
 		log.Errorf("failed to connect to merlin-mainnet-rpc.merlinchain.io")
@@ -90,18 +89,11 @@ func TestOffer(t *testing.T) {
 				log.Infof("address: %s offered", address)
 				return
 			}
-			nonce, err := service.QueryNonce(address, nonceUrl)
+			accessToken, err := service.Login(privateKeyHex, address, loginUrl)
 			if err != nil {
 				log.Errorf("err: %v", err)
 				return
 			}
-			log.Debugf("nonceRes: %s", nonce.Data.Nonce)
-			accessToken, err := service.Login(privateKeyHex, address, nonce.Data.Nonce, loginUrl)
-			if err != nil {
-				log.Errorf("err: %v", err)
-				return
-			}
-			log.Debugf("access token: %s", accessToken)
 			signResp, err := service.Sign(accessToken, address, singleAmount, signUrl, partyTokenContractAddress)
 			if err != nil {
 				log.Errorf("err: %v", err)
@@ -131,7 +123,7 @@ func CheckOfferOf(address string) (flag bool) {
 		return true
 	}
 	log.Debugf("amount: %s", amount.String())
-	return amount.Cmp(big.NewInt(0)) > 0
+	return amount.Cmp(big.NewInt(0)) > 1
 }
 
 func Offer(privateKeyHex string, signResp service.SignResp) (txHash string, err error) {
@@ -167,8 +159,8 @@ func Offer(privateKeyHex string, signResp service.SignResp) (txHash string, err 
 	}
 	opts.GasLimit = gasLimit
 	opts.GasPrice = big.NewInt(int64(math.Ceil(float64(gasPrice.Int64()) * gasPriceMultiples)))
-	log.Debugf("expiry: %d, v: %d, s: %v, r: %v", signResp.Data.TimeStamp, uint8(signResp.Data.V), s, r)
-	tx, err := btcFun.Offer(opts, common.HexToAddress(partyTokenContractAddress), util.ToWei(strconv.FormatInt(singleAmount, 10), 18), big.NewInt(signResp.Data.TimeStamp), uint8(signResp.Data.V), r, s)
+	log.Debugf("expiry: %d, v: %d, s: %v, r: %v", signResp.Data.Expiry, uint8(signResp.Data.V), s, r)
+	tx, err := btcFun.Offer(opts, common.HexToAddress(partyTokenContractAddress), util.ToWei(strconv.FormatInt(singleAmount, 10), 18), big.NewInt(signResp.Data.Expiry), uint8(signResp.Data.V), r, s)
 	if err != nil {
 		log.Errorf("err: %v", err)
 		return
