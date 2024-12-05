@@ -54,7 +54,7 @@ func TestQuoter(t *testing.T) {
 	}
 	tokenX := common.HexToAddress("0x480e158395cc5b41e5584347c495584ca2caf78d")
 	tokenY := common.HexToAddress("0xF6D226f9Dc15d9bB51182815b320D3fBE324e1bA")
-	fee := big.NewInt(10000)         // 假设手续费等级 0.3%
+	fee := big.NewInt(10000)         // 1%: 10000 0.3%: 3000    0.05%: 500      // 假设手续费等级 1%
 	amount := util.ToWei("1000", 18) // 输入 1 token
 	lowPt := big.NewInt(-887272)
 	amountY, finalPoint, err := quoter.SwapX2YStatic(opts, tokenX, tokenY, fee, amount, lowPt)
@@ -174,7 +174,7 @@ func BuyToken(opts *bind.TransactOpts) (txHash string, err error) {
 	}
 	tokenX := common.HexToAddress(merlContractAddress)
 	tokenY := common.HexToAddress(wbtcTokenContractAddress)
-	fee := big.NewInt(10000)                 // 假设手续费等级 1%
+	fee := big.NewInt(10000)                 // 1%: 10000 0.3%: 3000    0.05%: 500                 // 假设手续费等级 1%
 	amount := util.ToWei(SwapMerlAmount, 18) // 输入 merl token数量
 	lowPt := big.NewInt(-887272)
 	amountY, _, err := quoter.SwapX2YStatic(callOpts, tokenX, tokenY, fee, amount, lowPt)
@@ -183,8 +183,8 @@ func BuyToken(opts *bind.TransactOpts) (txHash string, err error) {
 		return
 	}
 
-	//fee3000 := []byte{0x0b, 0xb8} // 0.3% 的手续费编码
-	//fee500 := []byte{0x01, 0xf4}  // 0.05% 的手续费编码
+	//fee500 := "01f4"  // 0.05% 的手续费编码
+	//fee3000 := "0bb8" // 0.3% 的手续费编码
 	fee10000 := "2710" //  1%的手续费编码
 
 	// 按顺序将地址和手续费编码
