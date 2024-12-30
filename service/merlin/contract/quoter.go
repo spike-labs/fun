@@ -329,6 +329,18 @@ func (_Quoter *QuoterCaller) SwapX2YStatic(opts *bind.CallOpts, tokenX common.Ad
 	return out0, out1, err
 }
 
+func (_Quoter *QuoterCaller) SwapY2XStatic(opts *bind.CallOpts, tokenX common.Address, tokenY common.Address, fee *big.Int, amount *big.Int, lowPt *big.Int) (*big.Int, *big.Int, error) {
+	var out []interface{}
+	err := _Quoter.contract.Call(opts, &out, "swapY2X", tokenX, tokenY, fee, amount, lowPt)
+
+	if err != nil {
+		return nil, nil, err
+	}
+	out0 := *abi.ConvertType(out[0], new(*big.Int)).(**big.Int)
+	out1 := *abi.ConvertType(out[1], new(*big.Int)).(**big.Int)
+	return out0, out1, err
+}
+
 // SwapY2XCallback is a free data retrieval call binding the contract method 0xd3e1c284.
 //
 // Solidity: function swapY2XCallback(uint256 x, uint256 y, bytes path) view returns()
@@ -464,6 +476,10 @@ func (_Quoter *QuoterSession) SwapX2Y(tokenX common.Address, tokenY common.Addre
 
 func (_Quoter *QuoterSession) SwapX2YStatic(tokenX common.Address, tokenY common.Address, fee *big.Int, amount *big.Int, lowPt *big.Int) (*big.Int, *big.Int, error) {
 	return _Quoter.Contract.SwapX2YStatic(&_Quoter.CallOpts, tokenX, tokenY, fee, amount, lowPt)
+}
+
+func (_Quoter *QuoterSession) SwapY2XStatic(tokenX common.Address, tokenY common.Address, fee *big.Int, amount *big.Int, lowPt *big.Int) (*big.Int, *big.Int, error) {
+	return _Quoter.Contract.SwapY2XStatic(&_Quoter.CallOpts, tokenX, tokenY, fee, amount, lowPt)
 }
 
 // SwapX2Y is a paid mutator transaction binding the contract method 0x8501721f.

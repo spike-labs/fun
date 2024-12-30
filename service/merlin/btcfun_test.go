@@ -29,11 +29,11 @@ func init() {
 const (
 	loginUrl                   = "https://api-testnet-new.btc.fun/api/v1/login"
 	signUrl                    = "https://api-testnet-new.btc.fun/api/v1/token/sign"
-	partyTokenContractAddress  = "0xFF19B0491f4104BDFcEAD194Ba9ee7ff46744341"
-	btcFunContractAddress      = "0x0bC495E0e8b4817b60348D82390603f74E1871B4"
-	testnetMerlContractAddress = "0x5c9ad13be752a5e21e7ed393bb7d407144c6d550"
-	merlinTestNetRpcAddress    = "https://testnet-rpc.merlinchain.io"
-	singleAmount               = 2      //每次募资多少个merl
+	partyTokenContractAddress  = "0x4D9882a3BB13cc086367D0aE964367e6B7ea246f"
+	btcFunContractAddress      = "0x15545789c664f9b92703324c0a6423ade08337d1"
+	testnetMerlContractAddress = "0x5c46bFF4B38dc1EAE09C5BAc65872a1D8bc87378"
+	merlinTestNetRpcAddress    = "https://merlin-mainnet-rpc.merlinchain.io"
+	singleAmount               = 50     //每次募资多少个merl
 	gasLimit                   = 200000 //募资交易的gasLimit
 	gasPriceMultiples          = 1.3
 )

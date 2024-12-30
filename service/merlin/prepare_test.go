@@ -25,12 +25,12 @@ var MainWalletPrivateKeyList = []string{
 	"",
 }
 
-const btcAmount = "0.0001"
-const merlAmount = "1"
+const btcAmount = "0.00018"
+const merlAmount = "10000"
 
 func TestCheckAllowance(t *testing.T) {
 	walletStartIndex := 0
-	walletEndIndex := 10
+	walletEndIndex := 20
 
 	cli, err := ethclient.Dial(merlinTestNetRpcAddress)
 	if err != nil {
@@ -55,7 +55,7 @@ func TestCheckAllowance(t *testing.T) {
 				wg.Done()
 				<-throttle
 			}()
-			util.CheckAllowance(privateKeyHex, testnetMerlContractAddress, btcFunContractAddress, chainId, client)
+			util.CheckAllowance(privateKeyHex, testnetMerlContractAddress, merlinSwapContractAddress, chainId, client)
 			time.Sleep(3 * time.Second)
 		}(toAddressInfo.PrivateKey)
 	}
@@ -130,8 +130,8 @@ func TestERC20Aggregation(t *testing.T) {
 
 func TestDeliverMerl(t *testing.T) {
 	mainWalletPrivateIndex := 0
-	walletStartIndex := 0
-	walletEndIndex := 10
+	walletStartIndex := 1
+	walletEndIndex := 20
 
 	cli, err := ethclient.Dial(merlinTestNetRpcAddress)
 	if err != nil {
@@ -191,8 +191,8 @@ func TestDeliverMerl(t *testing.T) {
 
 func TestDeliverBtc(t *testing.T) {
 	mainWalletPrivateIndex := 0
-	walletStartIndex := 0
-	walletEndIndex := 10
+	walletStartIndex := 1
+	walletEndIndex := 20
 	cli, err := ethclient.Dial(merlinTestNetRpcAddress)
 	if err != nil {
 		log.Errorf("failed to connect to rpc")
@@ -286,7 +286,7 @@ func GetBtcFunAddressList(start int, end int) []AddressInfo {
 			return nil
 		}
 		address, err := util.GenerateAddress(priKeyString)
-		//log.Debugf("address: %s, privateKey: %s", address, priKeyString)
+		log.Debugf("address: %s, privateKey: %s", address, priKeyString)
 		addressList = append(addressList, AddressInfo{
 			Address:    address,
 			PrivateKey: priKeyString,

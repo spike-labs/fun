@@ -21,7 +21,7 @@ var (
 	merlinSwapContractAddress       = "0x1aFa5D7f89743219576Ef48a9826261bE6378a68" //
 	wbtcTokenContractAddress        = "0xF6D226f9Dc15d9bB51182815b320D3fBE324e1bA"
 	merlContractAddress             = "0x5c46bFF4B38dc1EAE09C5BAc65872a1D8bc87378"
-	swapContractAddress             = "0x2426191006F378BF33445f87938d355096eE2e8C" //池子合约
+	swapContractAddress             = "" //池子合约
 	merlinMainNetRpcAddress         = "https://merlin-mainnet-rpc.merlinchain.io"
 	merlinSwapQuoterContractAddress = "0x2569bce69287618e2cd004f785d016f7df29232f"
 	SlippageTolerance               = 0.05
@@ -52,20 +52,24 @@ func TestQuoter(t *testing.T) {
 		log.Errorf("failed to connect to merlin-mainnet-rpc.merlinchain.io")
 		return
 	}
-	tokenX := common.HexToAddress("0x480e158395cc5b41e5584347c495584ca2caf78d")
-	tokenY := common.HexToAddress("0xF6D226f9Dc15d9bB51182815b320D3fBE324e1bA")
-	fee := big.NewInt(10000)         // 1%: 10000 0.3%: 3000    0.05%: 500      // 假设手续费等级 1%
-	amount := util.ToWei("1000", 18) // 输入 1 token
+	tokenX := common.HexToAddress(partyTokenContractAddress) //party
+	tokenY := common.HexToAddress(merlContractAddress)       //merl
+	fee := big.NewInt(3000)                                  // 1%: 10000 0.3%: 3000    0.05%: 500      // 假设手续费等级 1%
+	amount := util.ToWei("1", 18)                            // 输入 1 token
 	lowPt := big.NewInt(-887272)
+
 	amountY, finalPoint, err := quoter.SwapX2YStatic(opts, tokenX, tokenY, fee, amount, lowPt)
+	//amountX, finalPoint, err := quoter.SwapY2XStatic(opts, tokenY, tokenX, fee, amount, lowPt)
 	if err != nil {
 		log.Errorf("failed to swap x2Y static quoter opts: %v", err)
 		return
 	}
-	log.Infof("swap x2Y static quoter opts: %s, %s", amountY.String(), finalPoint.String())
+	//finalY := x/amountY
+	finalTokenY := new(big.Float).Mul(new(big.Float).Quo(new(big.Float).SetInt(util.ToWei("10000", 18)), new(big.Float).SetInt(amountY)), new(big.Float).Sub(big.NewFloat(1), big.NewFloat(SlippageTolerance)))
+	log.Infof("swap x2Y static quoter opts: %s, %s", finalTokenY.String(), finalPoint.String())
 }
 
-func TestSwapMerl2Token(t *testing.T) {
+func TestSwapMerl2Party(t *testing.T) {
 	logger.SetAllLoggers(logger.LevelDebug)
 	client, err := ethclient.Dial(merlinMainNetRpcAddress)
 	if err != nil {
@@ -74,6 +78,55 @@ func TestSwapMerl2Token(t *testing.T) {
 	}
 	merlinClient = client
 	txOps, err := InitWallet(0, 1)
+	if err != nil {
+		log.Errorf("failed to init wallet")
+		return
+	}
+	throttle := make(chan struct{}, 5)
+	var wg sync.WaitGroup
+	for _, ops := range txOps {
+		wg.Add(1)
+		throttle <- struct{}{}
+		go func(opts *bind.TransactOpts, index int64) {
+			defer func() {
+				wg.Done()
+				<-throttle
+			}()
+			partyContract, err := contract.NewErc20(common.HexToAddress(partyTokenContractAddress), merlinClient)
+			if err != nil {
+				log.Errorf("err: %v", err)
+				return
+			}
+			partyWalletBalance, err := partyContract.BalanceOf(nil, opts.From)
+			if err != nil {
+				log.Errorf("err: %v", err)
+				return
+			}
+			if partyWalletBalance.Cmp(big.NewInt(0)) == 0 {
+				log.Debugf("address: %s,  index: %d, partyWalletBalance: %s", opts.From, index, partyWalletBalance.String())
+				return
+			}
+			txHash, err := BuyPartyToken(opts)
+			if err != nil {
+				log.Errorf("exec %d, err: %v", index, err)
+				return
+			}
+			log.Infof("exec %d , tx hash: %s success", index, txHash)
+		}(ops.Ops, ops.Index)
+		time.Sleep(3 * time.Second)
+	}
+	wg.Wait()
+}
+
+func TestSwapMerl2Wbtc(t *testing.T) {
+	logger.SetAllLoggers(logger.LevelDebug)
+	client, err := ethclient.Dial(merlinMainNetRpcAddress)
+	if err != nil {
+		log.Errorf("failed to connect to merlin-mainnet-rpc.merlinchain.io")
+		return
+	}
+	merlinClient = client
+	txOps, err := InitWallet(11, 12)
 	if err != nil {
 		log.Errorf("failed to init wallet")
 		return
@@ -102,7 +155,7 @@ func TestSwapMerl2Token(t *testing.T) {
 				log.Debugf("address: %s,  index: %d, wbtcWalletBalance: %s", opts.From, index, wbtcWalletBalance.String())
 				return
 			}
-			txHash, err := BuyToken(opts)
+			txHash, err := BuyWbtcToken(opts)
 			if err != nil {
 				log.Errorf("exec %d, err: %v", index, err)
 				return
@@ -157,7 +210,7 @@ func InitWallet(walletStartIndex int, walletEndIndex int) ([]TxOps, error) {
 	return txOps, nil
 }
 
-func BuyToken(opts *bind.TransactOpts) (txHash string, err error) {
+func BuyWbtcToken(opts *bind.TransactOpts) (txHash string, err error) {
 	router, err := contract.NewRouter(common.HexToAddress(merlinSwapContractAddress), merlinClient)
 	if err != nil {
 		log.Errorf("err: %v", err)
@@ -201,6 +254,62 @@ func BuyToken(opts *bind.TransactOpts) (txHash string, err error) {
 	}
 	finalTokenY := new(big.Float).Mul(floatTokenY, new(big.Float).Sub(big.NewFloat(1), big.NewFloat(SlippageTolerance)))
 	log.Debugf("final token y: %s, %s", amountY.String(), finalTokenY.String())
+	tx, err := router.SwapAmount(opts, contract.SwapSwapAmountParams{
+		pathBytes,
+		opts.From,
+		util.ToWei(SwapMerlAmount, 18),
+		BigFloat2Int(finalTokenY),
+		big.NewInt(deadline),
+	})
+
+	if err != nil {
+		log.Error(err)
+		return "", err
+	}
+	return tx.Hash().String(), nil
+}
+
+func BuyPartyToken(opts *bind.TransactOpts) (txHash string, err error) {
+	router, err := contract.NewRouter(common.HexToAddress(merlinSwapContractAddress), merlinClient)
+	if err != nil {
+		log.Errorf("err: %v", err)
+		return "", err
+	}
+	deadline := time.Now().Add(time.Minute * 100).Unix()
+	callOpts := &bind.CallOpts{
+		Context: context.Background(),
+	}
+	quoter, err := contract.NewQuoter(common.HexToAddress(merlinSwapQuoterContractAddress), merlinClient)
+	if err != nil {
+		log.Errorf("failed to connect to merlin-mainnet-rpc.merlinchain.io")
+		return
+	}
+	tokenY := common.HexToAddress(merlContractAddress)
+	tokenX := common.HexToAddress(partyTokenContractAddress)
+	fee := big.NewInt(3000)       // 1%: 10000 0.3%: 3000    0.05%: 500                 // 假设手续费等级 1%
+	amount := util.ToWei("1", 18) // 输入 merl token数量
+	lowPt := big.NewInt(-887272)
+	amountY, _, err := quoter.SwapX2YStatic(callOpts, tokenX, tokenY, fee, amount, lowPt)
+	if err != nil {
+		log.Errorf("failed to swap x2Y static quoter opts: %v", err)
+		return
+	}
+
+	//fee500 := "01f4"  // 0.05% 的手续费编码
+	fee3000 := "0bb8" // 0.3% 的手续费编码
+	//fee10000 := "2710" //  1%的手续费编码
+
+	// 按顺序将地址和手续费编码
+	pathBytes := bytes.Join([][]byte{
+		common.Hex2Bytes(merlContractAddress[2:]),
+		common.Hex2Bytes("00"),
+		common.Hex2Bytes(fee3000),
+		common.Hex2Bytes(partyTokenContractAddress[2:]),
+	}, nil)
+	finalTokenY := new(big.Float).Mul(new(big.Float).Quo(new(big.Float).SetInt(util.ToWei(SwapMerlAmount, 18)), new(big.Float).SetInt(amountY)), new(big.Float).Sub(big.NewFloat(1), big.NewFloat(SlippageTolerance)))
+
+	log.Debugf("final token y: %s, %s", amountY.String(), finalTokenY.String())
+
 	tx, err := router.SwapAmount(opts, contract.SwapSwapAmountParams{
 		pathBytes,
 		opts.From,
