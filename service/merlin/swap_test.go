@@ -118,6 +118,41 @@ func TestSwapMerl2Party(t *testing.T) {
 	wg.Wait()
 }
 
+func TestWithdrawWBtc(t *testing.T) {
+	logger.SetAllLoggers(logger.LevelDebug)
+	client, err := ethclient.Dial(merlinMainNetRpcAddress)
+	if err != nil {
+		log.Errorf("failed to connect to merlin-mainnet-rpc.merlinchain.io")
+		return
+	}
+	merlinClient = client
+	txOps, err := InitWallet(0, 1)
+	if err != nil {
+		log.Errorf("failed to init wallet")
+		return
+	}
+	throttle := make(chan struct{}, 3)
+	var wg sync.WaitGroup
+	for _, ops := range txOps {
+		wg.Add(1)
+		throttle <- struct{}{}
+		go func(opts *bind.TransactOpts, index int64) {
+			defer func() {
+				wg.Done()
+				<-throttle
+			}()
+			txHash, err := WithdrawBtc(opts)
+			if err != nil {
+				log.Errorf("exec %d, err: %v", index, err)
+				return
+			}
+			log.Infof("exec %d , tx hash: %s success", index, txHash)
+		}(ops.Ops, ops.Index)
+		time.Sleep(3 * time.Second)
+	}
+	wg.Wait()
+}
+
 func TestSwapMerl2Wbtc(t *testing.T) {
 	logger.SetAllLoggers(logger.LevelDebug)
 	client, err := ethclient.Dial(merlinMainNetRpcAddress)
@@ -320,6 +355,29 @@ func BuyPartyToken(opts *bind.TransactOpts) (txHash string, err error) {
 
 	if err != nil {
 		log.Error(err)
+		return "", err
+	}
+	return tx.Hash().String(), nil
+}
+
+func WithdrawBtc(opts *bind.TransactOpts) (txHash string, err error) {
+	wbtcContract, err := contract.NewWbtc(common.HexToAddress(wbtcTokenContractAddress), merlinClient)
+	if err != nil {
+		log.Errorf("err: %v", err)
+		return "", err
+	}
+	wbtcBalance, err := wbtcContract.BalanceOf(nil, opts.From)
+	if err != nil {
+		log.Errorf("err: %v", err)
+		return "", err
+	}
+	if wbtcBalance.Cmp(big.NewInt(0)) == 0 {
+		log.Infof("address: %s, wbtc balance: %s", opts.From, wbtcBalance.String())
+		return "", nil
+	}
+	tx, err := wbtcContract.Withdraw(opts, wbtcBalance)
+	if err != nil {
+		log.Errorf("err: %v", err)
 		return "", err
 	}
 	return tx.Hash().String(), nil
